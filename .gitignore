@@ -1,0 +1,22 @@
+# C++/CMake build files
+/build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.vcxproj*
+*.user
+*.log
+*.pyc
+*.pdb
+*.ilk
+*.idb
+*.class
+*.DS_Store
+.vscode/
