@@ -31,6 +31,7 @@ public:
 #ifdef __APPLE__
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
+
         GLFWmonitor *primary = glfwGetPrimaryMonitor();
         const GLFWvidmode *mode = glfwGetVideoMode(primary);
         if (!primary || !mode)
@@ -52,8 +53,13 @@ public:
         int ypos = mode->height / 2 - win_height / 2;
         glfwSetWindowPos(window_, xpos, ypos);
         spdlog::info("GLFW window created successfully with size {}x{} and centered", win_width, win_height);
+
+        glfwMaximizeWindow(window_);
+        spdlog::info("GLFW window maximized");
+
         glfwMakeContextCurrent(window_);
         spdlog::info("GLFW context made current");
+
         initImGui();
     }
 

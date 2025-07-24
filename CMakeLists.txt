@@ -39,7 +39,7 @@ add_executable(ruckig_sim main.cpp)
 
 target_sources(ruckig_sim
     PRIVATE
-        FILE_SET CXX_MODULES FILES ui/uimodule.cppm;ui/ruckig.cppm;window.cppm
+        FILE_SET CXX_MODULES FILES robot.cppm;pid.cppm;ui/uimodule.cppm;ui/ruckig.cppm;window.cppm
 )
 
 # Define MSVC deprecation warning silence macro
