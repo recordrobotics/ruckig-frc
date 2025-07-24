@@ -15,6 +15,9 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/pantor/ruckig.git
     GIT_TAG        v0.15.3
 )
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_CLOUD_CLIENT OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(ruckig)
 
 add_library(ruckig_jni SHARED ruckig_jni.cpp)
