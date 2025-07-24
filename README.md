@@ -1,8 +1,8 @@
 # ruckig-frc
 
-This is a ruckig frc swerve simulation.
+Ruckig frc swerve simulation and frc-specific java bindings.
 
-## Build Instructions
+## Build Instructions (simulation app)
 
 1. Run CMake to generate build files:
 
