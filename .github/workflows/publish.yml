@@ -1,0 +1,79 @@
+name: Build and Publish JNI Library
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-native:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      JAVA_VERSION: '17'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+      - name: Build native JNI library
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+        working-directory: ./jni
+      - name: Upload native library artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.os }}
+          path: |
+            jni/build/jni/windows/ruckig_jni.dll
+            jni/build/jni/linux/libruckig_jni.so
+            jni/build/jni/macos/libruckig_jni.dylib
+          if-no-files-found: ignore
+
+  publish-java:
+    needs: build-native
+    runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: '17'
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_ACTOR: ${{ github.actor }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all native artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: native-libs
+      - name: Move native libraries to build/jni
+        run: |
+          mkdir -p jni/build/jni/windows jni/build/jni/linux jni/build/jni/macos
+          find native-libs -name 'ruckig_jni.dll' -exec cp {} jni/build/jni/windows/ \;
+          find native-libs -name 'libruckig_jni.so' -exec cp {} jni/build/jni/linux/ \;
+          find native-libs -name 'libruckig_jni.dylib' -exec cp {} jni/build/jni/macos/ \;
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+        working-directory: ./jni
+      - name: Build Java package
+        run: ./gradlew build
+        working-directory: ./jni
+      - name: Publish to GitHub Packages
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: ./gradlew publish
+        working-directory: ./jni
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}

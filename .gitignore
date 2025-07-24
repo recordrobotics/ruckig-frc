@@ -1,5 +1,6 @@
 # C++/CMake build files
 /build/
+**/build/
 /out/
 CMakeFiles/
 CMakeCache.txt
@@ -22,3 +23,6 @@ Makefile
 *.DS_Store
 *.ini
 .vs/
+
+# Gradle
+.gradle/

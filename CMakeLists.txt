@@ -35,8 +35,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(ruckig)
 
-add_subdirectory(jni)
-
 add_executable(ruckig_frc main.cpp)
 
 target_sources(ruckig_frc
