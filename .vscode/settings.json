@@ -122,5 +122,11 @@
     },
     "cmake.generator": "Ninja",
     "C_Cpp.experimentalFeatures": "enabled",
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "cmake.configureEnvironment": {
+        "JAVA_HOME": "C:\\Users\\Public\\wpilib\\2025\\jdk"
+    },
+    "cmake.configureArgs": [
+        "-DJAVA_HOME=\"C:\\Users\\Public\\wpilib\\2025\\jdk\""
+    ]
 }

@@ -2,6 +2,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "java",
+            "name": "TestRuckig",
+            "request": "launch",
+            "preLaunchTask": "CMake: build",
+            "mainClass": "org.recordrobotics.ruckig.test.TestRuckig",
+            "projectName": "ruckig-frc_16d78045",
+            "vmArgs": "-Djava.library.path=${workspaceFolder}/build/jni --enable-native-access=ALL-UNNAMED"
+        },
+        {
             "name": "Debug ruckig-frc",
             "type": "cppvsdbg",
             "request": "launch",
