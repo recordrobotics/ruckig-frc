@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "*.ejs": "html",
+        ".noprocess": "ignore",
+        ".buildignore": "ignore",
+        "algorithm": "cpp",
+        "atomic": "cpp",
+        "bitset": "cpp"
+    },
+    "cmake.generator": "Ninja",
+    "C_Cpp.experimentalFeatures": "enabled",
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+}

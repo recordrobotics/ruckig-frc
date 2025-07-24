@@ -2,12 +2,14 @@
 #include <algorithm>
 
 import window;
+import ui.ruckig;
 
 int main()
 {
     try
     {
         Window win;
+        win.addUIModule(new ui::Ruckig());
         win.mainLoop();
     }
     catch (const std::exception &e)

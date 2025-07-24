@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(FetchContent)
+
 FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
@@ -27,11 +28,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
+FetchContent_Declare(
+    ruckig
+    GIT_REPOSITORY https://github.com/pantor/ruckig.git
+    GIT_TAG        v0.15.3
+)
+FetchContent_MakeAvailable(ruckig)
+
 add_executable(ruckig_sim main.cpp)
 
 target_sources(ruckig_sim
     PRIVATE
-        FILE_SET CXX_MODULES FILES window.cppm
+        FILE_SET CXX_MODULES FILES ui/uimodule.cppm;ui/ruckig.cppm;window.cppm
 )
 
 # Define MSVC deprecation warning silence macro
@@ -62,7 +70,7 @@ set(IMGUI_SRC
 target_sources(ruckig_sim PRIVATE ${IMGUI_SRC})
 
 # Link libraries
- target_link_libraries(ruckig_sim PRIVATE glfw spdlog::spdlog)
+ target_link_libraries(ruckig_sim PRIVATE glfw spdlog::spdlog ruckig)
 if (WIN32)
     target_link_libraries(ruckig_sim PRIVATE opengl32)
 elseif(APPLE)
@@ -75,3 +83,11 @@ else()
     find_package(OpenGL REQUIRED)
     target_link_libraries(ruckig_sim PRIVATE OpenGL::GL)
 endif()
+
+# Copy font files to output directory after build
+add_custom_command(TARGET ruckig_sim POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/fonts"
+        $<TARGET_FILE_DIR:ruckig_sim>/fonts
+    COMMENT "Copying all font files to output directory"
+)

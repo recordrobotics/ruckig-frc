@@ -6,8 +6,13 @@ module;
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <vector>
 
 export module window;
+
+import ui.uimodule;
+
+using namespace ui;
 
 export class Window
 {
@@ -81,6 +86,16 @@ public:
         }
     }
 
+    void addUIModule(UIModule *module)
+    {
+        uimodules_.push_back(module);
+    }
+
+    void removeUIModule(UIModule *module)
+    {
+        uimodules_.erase(std::remove(uimodules_.begin(), uimodules_.end(), module), uimodules_.end());
+    }
+
 private:
     static void glfwErrorCallback(int error, const char *description)
     {
@@ -102,6 +117,19 @@ private:
         style.ScaleAllSizes(main_scale);
         style.FontScaleDpi = main_scale;
 
+        // High DPI font loading
+        float font_size = 16.0f;
+        io.Fonts->Clear();
+        io.Fonts->AddFontFromFileTTF("fonts/RobotoMono-VariableFont_wght.ttf", font_size);
+
+        // Set framebuffer scale for ImGui
+        int fb_w, fb_h;
+        glfwGetFramebufferSize(window_, &fb_w, &fb_h);
+        int win_w, win_h;
+        glfwGetWindowSize(window_, &win_w, &win_h);
+        io.DisplayFramebufferScale = ImVec2((float)fb_w / win_w, (float)fb_h / win_h);
+        spdlog::info("ImGui framebuffer scale set to ({}, {})", io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
+
         ImGui_ImplGlfw_InitForOpenGL(window_, true);
         ImGui_ImplOpenGL3_Init("#version 330");
         spdlog::info("ImGui initialized successfully");
@@ -122,9 +150,11 @@ private:
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Hello, ImGui!");
-        ImGui::Text("Welcome to Ruckig FRC Simulation!");
-        ImGui::End();
+        for (auto *module : uimodules_)
+        {
+            if (module)
+                module->render();
+        }
 
         ImGui::Render();
         int display_w, display_h;
@@ -136,4 +166,5 @@ private:
     }
 
     GLFWwindow *window_ = nullptr;
+    std::vector<UIModule *> uimodules_;
 };
