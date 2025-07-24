@@ -20,5 +20,6 @@ Makefile
 *.idb
 *.class
 *.DS_Store
+*.ini
 .vscode/
 .vs/
