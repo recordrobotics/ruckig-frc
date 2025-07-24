@@ -1,4 +1,4 @@
-# ruckig_sim
+# ruckig-frc
 
 This is a ruckig frc swerve simulation.
 
@@ -19,5 +19,5 @@ This is a ruckig frc swerve simulation.
 3. Run the executable:
 
    ```sh
-   ./build/ruckig_sim
+   ./build/ruckig_frc
    ```

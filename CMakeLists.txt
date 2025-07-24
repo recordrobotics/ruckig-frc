@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(ruckig_sim)
+project(ruckig_frc)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,9 +35,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(ruckig)
 
-add_executable(ruckig_sim main.cpp)
+add_executable(ruckig_frc main.cpp)
 
-target_sources(ruckig_sim
+target_sources(ruckig_frc
     PRIVATE
         FILE_SET CXX_MODULES FILES robot.cppm;pid.cppm;ui/uimodule.cppm;ui/ruckig.cppm;window.cppm
 )
@@ -47,8 +47,8 @@ add_compile_definitions(_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS)
 
 # Enable C++23 modules if supported
 if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC|Clang|GNU")
-    set_target_properties(ruckig_sim PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED YES)
-    set_target_properties(ruckig_sim PROPERTIES CXX_EXTENSIONS OFF)
+    set_target_properties(ruckig_frc PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED YES)
+    set_target_properties(ruckig_frc PROPERTIES CXX_EXTENSIONS OFF)
 endif()
 
 # Add ImGui include directories manually
@@ -56,7 +56,7 @@ set(IMGUI_INCLUDE_DIRS
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
 )
-target_include_directories(ruckig_sim PRIVATE ${IMGUI_INCLUDE_DIRS})
+target_include_directories(ruckig_frc PRIVATE ${IMGUI_INCLUDE_DIRS})
 
 # Add ImGui source files directly to target_sources
 set(IMGUI_SRC
@@ -67,27 +67,27 @@ set(IMGUI_SRC
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
-target_sources(ruckig_sim PRIVATE ${IMGUI_SRC})
+target_sources(ruckig_frc PRIVATE ${IMGUI_SRC})
 
 # Link libraries
- target_link_libraries(ruckig_sim PRIVATE glfw spdlog::spdlog ruckig)
+ target_link_libraries(ruckig_frc PRIVATE glfw spdlog::spdlog ruckig)
 if (WIN32)
-    target_link_libraries(ruckig_sim PRIVATE opengl32)
+    target_link_libraries(ruckig_frc PRIVATE opengl32)
 elseif(APPLE)
     find_library(COCOA_LIBRARY Cocoa)
     find_library(OpenGL_LIBRARY OpenGL)
     find_library(IOKIT_LIBRARY IOKit)
     find_library(CoreVideo_LIBRARY CoreVideo)
-    target_link_libraries(ruckig_sim PRIVATE ${COCOA_LIBRARY} ${OpenGL_LIBRARY} ${IOKIT_LIBRARY} ${CoreVideo_LIBRARY})
+    target_link_libraries(ruckig_frc PRIVATE ${COCOA_LIBRARY} ${OpenGL_LIBRARY} ${IOKIT_LIBRARY} ${CoreVideo_LIBRARY})
 else()
     find_package(OpenGL REQUIRED)
-    target_link_libraries(ruckig_sim PRIVATE OpenGL::GL)
+    target_link_libraries(ruckig_frc PRIVATE OpenGL::GL)
 endif()
 
 # Copy font files to output directory after build
-add_custom_command(TARGET ruckig_sim POST_BUILD
+add_custom_command(TARGET ruckig_frc POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${CMAKE_SOURCE_DIR}/fonts"
-        $<TARGET_FILE_DIR:ruckig_sim>/fonts
+        $<TARGET_FILE_DIR:ruckig_frc>/fonts
     COMMENT "Copying all font files to output directory"
 )

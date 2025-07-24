@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug ruckig_sim",
+            "name": "Debug ruckig-frc",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/ruckig_sim.exe",
+            "program": "${workspaceFolder}/build/ruckig_frc.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -13,11 +13,11 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Build & Debug ruckig_sim",
+            "name": "Build & Debug ruckig-frc",
             "type": "cppvsdbg",
             "request": "launch",
             "preLaunchTask": "CMake: build",
-            "program": "${workspaceFolder}/build/ruckig_sim.exe",
+            "program": "${workspaceFolder}/build/ruckig_frc.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
