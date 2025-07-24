@@ -1,6 +1,52 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.28)
 project(ruckig_sim)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+include(FetchContent)
+FetchContent_Declare(
+    glfw
+    GIT_REPOSITORY https://github.com/glfw/glfw.git
+    GIT_TAG        3.4
+)
+FetchContent_MakeAvailable(glfw)
+
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG        v1.13.0
+)
+FetchContent_MakeAvailable(spdlog)
 
 add_executable(ruckig_sim main.cpp)
+
+target_sources(ruckig_sim
+    PRIVATE
+        FILE_SET CXX_MODULES FILES window.cppm
+)
+
+# Define MSVC deprecation warning silence macro
+add_compile_definitions(_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS)
+
+# Enable C++23 modules if supported
+if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC|Clang|GNU")
+    set_target_properties(ruckig_sim PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED YES)
+    set_target_properties(ruckig_sim PROPERTIES CXX_EXTENSIONS OFF)
+endif()
+
+# Link libraries
+ target_link_libraries(ruckig_sim PRIVATE glfw spdlog::spdlog)
+if (WIN32)
+    target_link_libraries(ruckig_sim PRIVATE opengl32)
+elseif(APPLE)
+    find_library(COCOA_LIBRARY Cocoa)
+    find_library(OpenGL_LIBRARY OpenGL)
+    find_library(IOKIT_LIBRARY IOKit)
+    find_library(CoreVideo_LIBRARY CoreVideo)
+    target_link_libraries(ruckig_sim PRIVATE ${COCOA_LIBRARY} ${OpenGL_LIBRARY} ${IOKIT_LIBRARY} ${CoreVideo_LIBRARY})
+else()
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(ruckig_sim PRIVATE OpenGL::GL)
+endif()
