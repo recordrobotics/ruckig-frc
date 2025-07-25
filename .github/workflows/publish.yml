@@ -8,12 +8,30 @@ on:
 
 jobs:
   build-native:
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            target: windows
+            cross: false
+          - os: macos-latest
+            target: macos
+            cross: false
+          - os: ubuntu-latest
+            target: linux
+            cross: false
+          - os: ubuntu-latest
+            target: athena
+            cross: true
+            toolchain_url: https://github.com/wpilibsuite/opensdk/releases/download/v2025-2/cortexa9_vfpv3-roborio-academic-2025-x86_64-linux-gnu-Toolchain-12.1.0.tgz
+          - os: ubuntu-latest
+            target: arm64
+            cross: true
+            toolchain_url: https://github.com/wpilibsuite/opensdk/releases/download/v2025-2/arm64-bookworm-2025-x86_64-linux-gnu-Toolchain-12.2.0.tgz
+    runs-on: ${{ matrix.os }}
     env:
       JAVA_VERSION: '17'
+      TOOLCHAIN_ROOT: '${{ github.workspace }}/jni/toolchain'
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK ${{ env.JAVA_VERSION }}
@@ -23,19 +41,29 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
       - name: Install CMake
         uses: jwlawson/actions-setup-cmake@v2
+      - name: Download toolchain
+        if: ${{ matrix.cross }}
+        run: |
+          wget ${{ matrix.toolchain_url }} -O toolchain.tgz
+          mkdir -p toolchain
+          tar -xzf toolchain.tgz -C toolchain --strip-components=1
+          rm toolchain.tgz
+        working-directory: ./jni
       - name: Build native JNI library
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release${{ matrix.cross && format(' -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/{0}-toolchain.cmake', matrix.target) || '' }}
           cmake --build build --config Release
         working-directory: ./jni
       - name: Upload native library artifact
         uses: actions/upload-artifact@v4
         with:
-          name: native-${{ matrix.os }}
+          name: native-${{ matrix.target }}
           path: |
-            jni/build/jni/windows/ruckig_jni.dll
-            jni/build/jni/linux/libruckig_jni.so
-            jni/build/jni/macos/libruckig_jni.dylib
+            jni/build/jni/windows/x86-64/shared/ruckig_jni.dll
+            jni/build/jni/linux/x86-64/shared/libruckig_jni.so
+            jni/build/jni/linux/arm64/shared/libruckig_jni.so
+            jni/build/jni/linux/athena/shared/libruckig_jni.so
+            jni/build/jni/osx/universal/shared/libruckig_jni.dylib
           if-no-files-found: ignore
 
   publish-java:
@@ -54,10 +82,8 @@ jobs:
           path: native-libs
       - name: Move native libraries to build/jni
         run: |
-          mkdir -p jni/build/jni/windows jni/build/jni/linux jni/build/jni/macos
-          find native-libs -name 'ruckig_jni.dll' -exec cp {} jni/build/jni/windows/ \;
-          find native-libs -name 'libruckig_jni.so' -exec cp {} jni/build/jni/linux/ \;
-          find native-libs -name 'libruckig_jni.dylib' -exec cp {} jni/build/jni/macos/ \;
+          mkdir -p jni/build/jni/windows/x86-64/shared jni/build/jni/linux/x86-64/shared jni/build/jni/linux/arm64/shared jni/build/jni/linux/athena/shared jni/build/jni/osx/universal/shared
+          rsync -a --include='*/' --include='ruckig_jni.dll' --include='libruckig_jni.so' --include='libruckig_jni.dylib' --exclude='*' native-libs/ jni/build/jni/
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:

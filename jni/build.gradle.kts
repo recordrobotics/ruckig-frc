@@ -26,14 +26,6 @@ version = (System.getenv("GITHUB_REF_NAME")?.removePrefix("v")) ?: run {
     "$tag-SNAPSHOT"
 }
 
-val osName = System.getProperty("os.name").lowercase()
-val nativeLibDir = when {
-    osName.contains("win") -> "windows"
-    osName.contains("mac") -> "macos"
-    osName.contains("nix") || osName.contains("nux") -> "linux"
-    else -> "unknown"
-}
-
 sourceSets {
     main {
         java.srcDir("org/recordrobotics/ruckig")
@@ -42,17 +34,7 @@ sourceSets {
     }
 }
 
-tasks.register<Copy>("copyNativeLib") {
-    from("./build/jni/$nativeLibDir")
-    into("build/resources/main/$nativeLibDir")
-}
-
 tasks.named<Jar>("jar") {
-    dependsOn("copyNativeLib")
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from("build/resources/main/$nativeLibDir") {
-        into(nativeLibDir)
-    }
     exclude("org/recordrobotics/ruckig/test/**")
 }
 
@@ -61,8 +43,26 @@ tasks.named<Jar>("sourcesJar") {
 }
 
 tasks.named<Javadoc>("javadoc") {
-    dependsOn("copyNativeLib")
     exclude("org/recordrobotics/ruckig/test/**")
+}
+
+// Create tasks to zip native libraries for each platform
+val nativePlatforms = mapOf(
+    "windowsx86-64" to "windows/x86-64/shared",
+    "osxuniversal" to "osx/universal/shared",
+    "linuxx86-64" to "linux/x86-64/shared",
+    "linuxathena" to "linux/athena/shared",
+    "linuxarm64" to "linux/arm64/shared"
+)
+
+val nativeZips = nativePlatforms.map { (zipName, nativePath) ->
+    tasks.register<Zip>("zipNative${zipName.replaceFirstChar { it.uppercase() }}") {
+        group = "build"
+        archiveBaseName.set(zipName)
+        destinationDirectory.set(layout.buildDirectory.dir("native-zips"))
+        from(layout.buildDirectory.dir("jni/$nativePath"))
+        into(nativePath)
+    }
 }
 
 jreleaser {
@@ -126,6 +126,17 @@ publishing {
                     connection.set("scm:git:https://github.com/recordrobotics/ruckig-frc.git")
                     developerConnection.set("scm:git:ssh://github.com:recordrobotics/ruckig-frc.git")
                     url.set("https://github.com/recordrobotics/ruckig-frc")
+                }
+            }
+        }
+        create<MavenPublication>("native") {
+            groupId = project.group.toString()
+            artifactId = "ruckig-native"
+            version = project.version.toString()
+            nativeZips.forEach { zipTask ->
+                artifact(zipTask.get().archiveFile) {
+                    classifier = zipTask.get().archiveBaseName.get()
+                    extension = "zip"
                 }
             }
         }

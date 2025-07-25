@@ -1,0 +1,16 @@
+# Toolchain file for cross-compiling to Linux ARM64
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
+
+# Search for compiler executables ending with -gcc and -g++ in the toolchain bin directory
+file(GLOB ARM64_GCC_PATH "$ENV{TOOLCHAIN_ROOT}/bin/*-gcc")
+file(GLOB ARM64_GPP_PATH "$ENV{TOOLCHAIN_ROOT}/bin/*-g++")
+list(GET ARM64_GCC_PATH 0 ARM64_GCC)
+list(GET ARM64_GPP_PATH 0 ARM64_GPP)
+set(CMAKE_C_COMPILER   "${ARM64_GCC}")
+set(CMAKE_CXX_COMPILER "${ARM64_GPP}")
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
