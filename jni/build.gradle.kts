@@ -89,7 +89,7 @@ jreleaser {
                     applyMavenCentralRules.set(true)
                     snapshotSupported.set(true)
                     closeRepository.set(true)
-                    releaseRepository.set(false)
+                    releaseRepository.set(true)
                     stagingRepository(layout.buildDirectory.dir("deploy").get().asFile.absolutePath)
                 }
             }
