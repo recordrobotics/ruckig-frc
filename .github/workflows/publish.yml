@@ -59,12 +59,8 @@ jobs:
         with:
           name: native-${{ matrix.target }}
           path: |
-            jni/build/jni/windows/x86-64/shared/ruckig_jni.dll
-            jni/build/jni/linux/x86-64/shared/libruckig_jni.so
-            jni/build/jni/linux/arm64/shared/libruckig_jni.so
-            jni/build/jni/linux/athena/shared/libruckig_jni.so
-            jni/build/jni/osx/universal/shared/libruckig_jni.dylib
-          if-no-files-found: ignore
+            jni/build/jni/
+          if-no-files-found: warn
 
   publish-java:
     needs: build-native
@@ -76,18 +72,12 @@ jobs:
       GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
-      - name: Download all native artifacts
+      - name: Download native library artifacts
         uses: actions/download-artifact@v4
         with:
-          path: native-libs
-      - name: Move native libraries to build/jni
-        run: |
-          mkdir -p jni/build/jni/windows/x86-64/shared jni/build/jni/linux/x86-64/shared jni/build/jni/linux/arm64/shared jni/build/jni/linux/athena/shared jni/build/jni/osx/universal/shared
-          rsync -a --include='*/' --include='ruckig_jni.dll' --include='libruckig_jni.so' --include='libruckig_jni.dylib' --exclude='*' native-libs/native-windows jni/build/jni/
-          rsync -a --include='*/' --include='ruckig_jni.dll' --include='libruckig_jni.so' --include='libruckig_jni.dylib' --exclude='*' native-libs/native-macos jni/build/jni/
-          rsync -a --include='*/' --include='ruckig_jni.dll' --include='libruckig_jni.so' --include='libruckig_jni.dylib' --exclude='*' native-libs/native-linux jni/build/jni/
-          rsync -a --include='*/' --include='ruckig_jni.dll' --include='libruckig_jni.so' --include='libruckig_jni.dylib' --exclude='*' native-libs/native-athena jni/build/jni/
-          rsync -a --include='*/' --include='ruckig_jni.dll' --include='libruckig_jni.so' --include='libruckig_jni.dylib' --exclude='*' native-libs/native-arm64 jni/build/jni/
+          path: jni/build/jni
+          pattern: 'native-*'
+          merge-multiple: true
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
