@@ -29,17 +29,23 @@ More information about the underlying Ruckig library can be found here [https://
    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
    ```
 
-   > ### Graphics Backend (Windows)
-   >
-   > To select a graphics backend (default is `OpenGL`), add `-DBACKEND=OpenGL|DX11`.
-   >
-   > Example:
-   >
-   > ```powershell
-   > cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBACKEND=DX11
-   > ```
+   ### Graphics Backend (Windows)
+
+   To select a graphics backend (default is `OpenGL`), add `-DBACKEND=OpenGL|DX11`.
+
+   Example:
+
+   ```powershell
+   cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBACKEND=DX11
+   ```
 
    **Note:** Metal backend is not supported on Windows.
+
+   ### Custom output directory
+
+   To change the output directory use `-DBUILD_OUTPUT_DIR=path/to/output`
+
+   **Note:** Relative paths are relative to the build folder, not the current directory. (`-DBUILD_OUTPUT_DIR=output` is `build/output`)
 
 2. **Build the project**
 
@@ -50,7 +56,7 @@ More information about the underlying Ruckig library can be found here [https://
 3. **Run the executable**
 
    ```powershell
-   .\build\ruckig_frc.exe
+   .\build\output\ruckig_frc.exe
    ```
 
 ---
@@ -81,15 +87,15 @@ More information about the underlying Ruckig library can be found here [https://
      -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)"
    ```
 
-   > ### Graphics Backend (macOS)
-   >
-   > To select a graphics backend (default is OpenGL), add `-DBACKEND=OpenGL|Metal`.
-   >
-   > Example:
-   >
-   > ```sh
-   > cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release > -DBACKEND=Metal ...
-   > ```
+   ### Graphics Backend (macOS)
+
+   To select a graphics backend (default is OpenGL), add `-DBACKEND=OpenGL|Metal`.
+
+   Example:
+
+   ```sh
+   cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release > -DBACKEND=Metal ...
+   ```
 
    **Important!:** For Metal backend, download the [Metal C++ library](https://developer.apple.com/metal/cpp/) from Apple and set the cmake `METAL_CPP_INCLUDE_PATH` option to the extracted folder:
 
@@ -109,6 +115,12 @@ More information about the underlying Ruckig library can be found here [https://
      -DMETAL_CPP_INCLUDE_PATH=./metal-cpp
    ```
 
+   ### Custom output directory
+
+   To change the output directory use `-DBUILD_OUTPUT_DIR=path/to/output`
+
+   **Note:** Relative paths are relative to the build folder, not the current directory. (`-DBUILD_OUTPUT_DIR=output` is `build/output`)
+
 4. **Build the project**
 
    ```sh
@@ -118,7 +130,7 @@ More information about the underlying Ruckig library can be found here [https://
 5. **Run the executable**
 
    ```sh
-   ./build/ruckig_frc
+   ./build/output/ruckig_frc
    ```
 
 ---
@@ -157,15 +169,13 @@ More information about the underlying Ruckig library can be found here [https://
    On Fedora:
 
    ```sh
-   sudo dnf install clang
-   # Check for clang-scan-deps availability
+   sudo dnf install clang clang-tools-extra
    ```
 
    On Arch:
 
    ```sh
-   sudo pacman -S clang
-   # Check for clang-scan-deps availability
+   sudo pacman -S clang clang-tools-extra
    ```
 
 3. **Install dependencies for Wayland/X11 support**
@@ -201,6 +211,12 @@ More information about the underlying Ruckig library can be found here [https://
 
    **Note**: The only graphics backend supported on Linux is OpenGL
 
+   ### Custom output directory
+
+   To change the output directory use `-DBUILD_OUTPUT_DIR=path/to/output`
+
+   **Note:** Relative paths are relative to the build folder, not the current directory. (`-DBUILD_OUTPUT_DIR=output` is `build/output`)
+
 5. **Build the project**
 
    ```sh
@@ -210,7 +226,7 @@ More information about the underlying Ruckig library can be found here [https://
 6. **Run the executable**
 
    ```sh
-   ./build/ruckig_frc
+   ./build/output/ruckig_frc
    ```
 
 ---
