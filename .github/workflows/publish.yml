@@ -97,6 +97,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+      - name: Upload local maven repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-deploy
+          path: |
+            jni/build/deploy/
+          if-no-files-found: warn
       - name: Publish JAR to Maven Central
         if: startsWith(github.ref, 'refs/tags/v')
         run: ./gradlew jreleaserDeploy

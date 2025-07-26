@@ -139,6 +139,30 @@ publishing {
                     extension = "zip"
                 }
             }
+
+            pom {
+                name.set("ruckig-native")
+                description.set("Native WPILib JNI bindings for Ruckig for FRC")
+                url.set("https://github.com/recordrobotics/ruckig-frc")
+                inceptionYear.set("2025")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("recordrobotics")
+                        name.set("Record Robotics")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:https://github.com/recordrobotics/ruckig-frc.git")
+                    developerConnection.set("scm:git:ssh://github.com:recordrobotics/ruckig-frc.git")
+                    url.set("https://github.com/recordrobotics/ruckig-frc")
+                }
+            }
         }
     }
 
