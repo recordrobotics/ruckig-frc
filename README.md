@@ -94,7 +94,7 @@ More information about the underlying Ruckig library can be found here [https://
    Example:
 
    ```sh
-   cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release > -DBACKEND=Metal ...
+   cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release ... -DBACKEND=Metal ...
    ```
 
    **Important!:** For Metal backend, download the [Metal C++ library](https://developer.apple.com/metal/cpp/) from Apple and set the cmake `METAL_CPP_INCLUDE_PATH` option to the extracted folder:
