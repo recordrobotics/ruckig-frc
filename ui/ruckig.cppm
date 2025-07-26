@@ -18,12 +18,13 @@ const size_t max_trail_points = 5000; // Maximum number of trail points
 
 export namespace ui
 {
-    export enum class RobotControlMode {
+    enum class RobotControlMode
+    {
         PositionHold,
         Velocity
     };
 
-    export class RuckigModule : public UIModule
+    class RuckigModule : public UIModule
     {
     public:
         RuckigModule() : ruckig(0.02), gui_ruckig(0.02), robot()
