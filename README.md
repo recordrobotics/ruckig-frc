@@ -1,12 +1,16 @@
-# ruckig-frc
+# ruckig-frc [![Maven Central](https://img.shields.io/maven-central/v/org.recordrobotics.ruckig/ruckig-frc.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.recordrobotics.ruckig/ruckig-frc)
 
-Ruckig frc swerve simulation and frc-specific java bindings.
-
-[![Maven Central](https://img.shields.io/maven-central/v/org.recordrobotics.ruckig/ruckig-frc.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.recordrobotics.ruckig/ruckig-frc)
+[Ruckig](https://github.com/pantor/ruckig) frc swerve simulation and frc-specific java bindings.
 
 ## Installation Instructions (WPILib Vendordep)
 
 Online installation url: [https://maven.recordrobotics.org/ruckig-frc/vendordep/ruckig-frc.json](https://maven.recordrobotics.org/ruckig-frc/vendordep/ruckig-frc.json)
+
+## Example usage
+
+An example of using the library can be found at [jni/org/recordrobotics/ruckig/test/TestRuckig.java](https://github.com/recordrobotics/ruckig-frc/blob/main/jni/org/recordrobotics/ruckig/test/TestRuckig.java)
+
+More information about the underlying Ruckig library can be found here [https://docs.ruckig.com/](https://docs.ruckig.com/)
 
 ## Build Instructions (simulation app)
 
@@ -66,7 +70,7 @@ This is for building JNI on your current system (no cross-compiling).
 
    The published Maven package will be located at:
 
-   ```
+   ```sh
    jni/build/deploy
    ```
 
@@ -138,7 +142,7 @@ cmake --build build --config Release
 
 The published Maven package will be located at:
 
-```
+```sh
 jni/build/deploy
 ```
 
