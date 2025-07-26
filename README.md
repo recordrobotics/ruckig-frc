@@ -14,25 +14,206 @@ An example of using the library can be found at [jni/org/recordrobotics/ruckig/t
 
 More information about the underlying Ruckig library can be found here [https://docs.ruckig.com/](https://docs.ruckig.com/)
 
-## Build Instructions (simulation app)
+## Build Instructions (Simulation App)
 
-1. Run CMake to generate build files:
+> **Prerequisite:** Make sure you have [CMake](https://cmake.org/download/) installed (version 3.28 or newer is required).
+---
 
-   ```sh
-   cmake -S . -B build
+### Windows
+
+1. **Configure CMake**
+
+   Open a terminal in the project root and run:
+
+   ```powershell
+   cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
    ```
 
-2. Build the project:
+   > ### Graphics Backend (Windows)
+   >
+   > To select a graphics backend (default is `OpenGL`), add `-DBACKEND=OpenGL|DX11`.
+   >
+   > Example:
+   >
+   > ```powershell
+   > cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBACKEND=DX11
+   > ```
 
-   ```sh
-   cmake --build build
+   **Note:** Metal backend is not supported on Windows.
+
+2. **Build the project**
+
+   ```powershell
+   cmake --build build --config Release
    ```
 
-3. Run the executable:
+3. **Run the executable**
+
+   ```powershell
+   .\build\ruckig_frc.exe
+   ```
+
+---
+
+### macOS
+
+1. **Install Ninja**
+
+   ```sh
+   brew install ninja
+   ```
+
+2. **Install LLVM/Clang**
+
+   ```sh
+   brew install llvm
+   ```
+
+3. **Configure CMake**
+
+   Open a terminal in the project root and run:
+
+   ```sh
+   cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release \
+     -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang \
+     -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \
+     -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=/usr/local/opt/llvm/bin/clang-scan-deps \
+     -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)"
+   ```
+
+   > ### Graphics Backend (macOS)
+   >
+   > To select a graphics backend (default is OpenGL), add `-DBACKEND=OpenGL|Metal`.
+   >
+   > Example:
+   >
+   > ```sh
+   > cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release > -DBACKEND=Metal ...
+   > ```
+
+   **Important!:** For Metal backend, download the [Metal C++ library](https://developer.apple.com/metal/cpp/) from Apple and set the cmake `METAL_CPP_INCLUDE_PATH` option to the extracted folder:
+
+   ```sh
+   -DMETAL_CPP_INCLUDE_PATH=/path/to/metal-cpp
+   ```
+
+   Full command:
+
+   ```sh
+   cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release \
+     -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang \
+     -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ \
+     -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=/usr/local/opt/llvm/bin/clang-scan-deps \
+     -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" \
+     -DBACKEND=Metal \
+     -DMETAL_CPP_INCLUDE_PATH=./metal-cpp
+   ```
+
+4. **Build the project**
+
+   ```sh
+   cmake --build build --config Release
+   ```
+
+5. **Run the executable**
 
    ```sh
    ./build/ruckig_frc
    ```
+
+---
+
+### Linux
+
+1. **Install Ninja**
+
+   On Ubuntu/Debian:
+
+   ```sh
+   sudo apt update
+   sudo apt install ninja-build
+   ```
+
+   On Fedora:
+
+   ```sh
+   sudo dnf install ninja-build
+   ```
+
+   On Arch:
+
+   ```sh
+   sudo pacman -S ninja
+   ```
+
+2. **Install Clang and clang-scan-deps**
+
+   On Ubuntu/Debian:
+
+   ```sh
+   sudo apt install clang-19 clang-tools-19
+   ```
+
+   On Fedora:
+
+   ```sh
+   sudo dnf install clang
+   # Check for clang-scan-deps availability
+   ```
+
+   On Arch:
+
+   ```sh
+   sudo pacman -S clang
+   # Check for clang-scan-deps availability
+   ```
+
+3. **Install dependencies for Wayland/X11 support**
+
+   On Ubuntu/Debian:
+
+   ```sh
+   sudo apt install wayland-protocols libwayland-dev libxkbcommon-dev libxrandr-dev libx11-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libgl1-mesa-dev
+   ```
+
+   On Fedora:
+
+   ```sh
+   sudo dnf install wayland-protocols-devel libwayland-devel libxkbcommon-devel libXrandr-devel libX11-devel libXinerama-devel libXcursor-devel libXi-devel libXext-devel mesa-libGL-devel
+   ```
+
+   On Arch:
+
+   ```sh
+   sudo pacman -S wayland libxkbcommon libxrandr libx11 libxinerama libxcursor libxi libxext mesa
+   ```
+
+4. **Configure CMake**
+
+   Open a terminal in the project root and run:
+
+   ```sh
+   cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release \
+     -DCMAKE_C_COMPILER=clang-19 \
+     -DCMAKE_CXX_COMPILER=clang++-19 \
+     -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=clang-scan-deps-19
+   ```
+
+   **Note**: The only graphics backend supported on Linux is OpenGL
+
+5. **Build the project**
+
+   ```sh
+   cmake --build build --config Release
+   ```
+
+6. **Run the executable**
+
+   ```sh
+   ./build/ruckig_frc
+   ```
+
+---
 
 ## Build Instructions (JNI)
 
