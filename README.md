@@ -2,6 +2,8 @@
 
 [Ruckig](https://github.com/pantor/ruckig) frc swerve simulation and frc-specific java bindings.
 
+<img width="1879" height="1417" alt="Screenshot of the simulation app" src="https://github.com/user-attachments/assets/4a6b3ade-2679-47d5-893d-3b36bc002f0c" />
+
 ## Installation Instructions (WPILib Vendordep)
 
 Online installation url: [https://maven.recordrobotics.org/ruckig-frc/vendordep/ruckig-frc.json](https://maven.recordrobotics.org/ruckig-frc/vendordep/ruckig-frc.json)
