@@ -5,14 +5,22 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Modern backend selection option
+set(BACKEND "OpenGL" CACHE STRING "Graphics backend: OpenGL, DX11, or Metal")
+set_property(CACHE BACKEND PROPERTY STRINGS OpenGL DX11 Metal)
+
+message(STATUS "Compiling for graphics backend: ${BACKEND}")
+
 include(FetchContent)
 
-FetchContent_Declare(
-    glfw
-    GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG        3.4
-)
-FetchContent_MakeAvailable(glfw)
+if(BACKEND STREQUAL "OpenGL" OR BACKEND STREQUAL "Metal")
+    FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG        3.4
+    )
+    FetchContent_MakeAvailable(glfw)
+endif()
 
 FetchContent_Declare(
     spdlog
@@ -54,38 +62,91 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC|Clang|GNU")
     set_target_properties(ruckig_frc PROPERTIES CXX_EXTENSIONS OFF)
 endif()
 
-# Add ImGui include directories manually
+# Set compile definition for backend
+string(TOUPPER "${BACKEND}" BACKEND_UPPER)
+target_compile_definitions(ruckig_frc PRIVATE "BACKEND_${BACKEND_UPPER}")
+
+# Backend-specific ImGui sources and libraries
+if (BACKEND STREQUAL "OpenGL")
+    set(IMGUI_BACKEND_SRC
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+    )
+    set(BACKEND_LIBS glfw)
+    if (WIN32)
+        list(APPEND BACKEND_LIBS opengl32)
+    elseif(APPLE)
+        find_library(OpenGL_LIBRARY OpenGL)
+        find_library(COCOA_LIBRARY Cocoa)
+        find_library(IOKIT_LIBRARY IOKit)
+        find_library(CoreVideo_LIBRARY CoreVideo)
+        list(APPEND BACKEND_LIBS ${OpenGL_LIBRARY} ${COCOA_LIBRARY} ${IOKIT_LIBRARY} ${CoreVideo_LIBRARY})
+    else()
+        find_package(OpenGL REQUIRED)
+        list(APPEND BACKEND_LIBS OpenGL::GL)
+    endif()
+elseif (BACKEND STREQUAL "DX11")
+    set(IMGUI_BACKEND_SRC
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_dx11.cpp
+    )
+    set(BACKEND_LIBS d3d11 dxgi)
+elseif (BACKEND STREQUAL "Metal")
+    target_compile_definitions(ruckig_frc PRIVATE "IMGUI_IMPL_METAL_CPP")
+    set(IMGUI_BACKEND_SRC
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_metal.mm
+    )
+    set(BACKEND_LIBS glfw)
+    if(METAL_CPP_INCLUDE_PATH)
+        target_include_directories(ruckig_frc PRIVATE
+            ${METAL_CPP_INCLUDE_PATH}
+        )
+    else()
+        message(FATAL_ERROR "METAL_CPP_INCLUDE_PATH is not set. Please set it to the path of the Metal C++ headers.")
+    endif()
+
+    target_sources(ruckig_frc PRIVATE window-metal.mm)
+    # Disable warning for arc bridge casts in non-ARC files for Metal backend
+    set_source_files_properties(
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_metal.mm
+        window-metal.mm
+        PROPERTIES COMPILE_FLAGS "-Wno-arc-bridge-casts-disallowed-in-nonarc"
+    )
+
+    if(APPLE)
+        find_library(METAL_LIBRARY Metal)
+        find_library(METALKIT_LIBRARY MetalKit)
+        find_library(COCOA_LIBRARY Cocoa)
+        find_library(IOKIT_LIBRARY IOKit)
+        find_library(CoreVideo_LIBRARY CoreVideo)
+        find_library(QuartzCore_LIBRARY QuartzCore)
+        find_library(FOUNDATION_LIBRARY Foundation)
+        list(APPEND BACKEND_LIBS ${METAL_LIBRARY} ${METALKIT_LIBRARY} ${COCOA_LIBRARY} ${IOKIT_LIBRARY} ${CoreVideo_LIBRARY} ${QuartzCore_LIBRARY} ${FOUNDATION_LIBRARY})
+    endif()
+endif()
+
+# Common ImGui sources
+set(IMGUI_SRC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${IMGUI_BACKEND_SRC}
+)
+target_sources(ruckig_frc PRIVATE ${IMGUI_SRC})
+
+# ImGui include dirs
 set(IMGUI_INCLUDE_DIRS
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
 )
 target_include_directories(ruckig_frc PRIVATE ${IMGUI_INCLUDE_DIRS})
 
-# Add ImGui source files directly to target_sources
-set(IMGUI_SRC
-    ${imgui_SOURCE_DIR}/imgui.cpp
-    ${imgui_SOURCE_DIR}/imgui_draw.cpp
-    ${imgui_SOURCE_DIR}/imgui_tables.cpp
-    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
-)
-target_sources(ruckig_frc PRIVATE ${IMGUI_SRC})
-
 # Link libraries
- target_link_libraries(ruckig_frc PRIVATE glfw spdlog::spdlog ruckig)
-if (WIN32)
-    target_link_libraries(ruckig_frc PRIVATE opengl32)
-elseif(APPLE)
-    find_library(COCOA_LIBRARY Cocoa)
-    find_library(OpenGL_LIBRARY OpenGL)
-    find_library(IOKIT_LIBRARY IOKit)
-    find_library(CoreVideo_LIBRARY CoreVideo)
-    target_link_libraries(ruckig_frc PRIVATE ${COCOA_LIBRARY} ${OpenGL_LIBRARY} ${IOKIT_LIBRARY} ${CoreVideo_LIBRARY})
-else()
-    find_package(OpenGL REQUIRED)
-    target_link_libraries(ruckig_frc PRIVATE OpenGL::GL)
-endif()
+# Always link spdlog and ruckig, plus backend-specific
+set(LINK_LIBS spdlog::spdlog ruckig ${BACKEND_LIBS})
+target_link_libraries(ruckig_frc PRIVATE ${LINK_LIBS})
 
 # Copy font files to output directory after build
 add_custom_command(TARGET ruckig_frc POST_BUILD

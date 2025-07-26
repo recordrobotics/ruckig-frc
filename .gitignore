@@ -26,3 +26,5 @@ Makefile
 
 # Gradle
 .gradle/
+
+metal-cpp/
