@@ -143,6 +143,10 @@ jobs:
         with:
           path: docs/vendordep/vendordep/repos/releases
           name: maven-deploy
+      - name: Update version in vendordep JSON
+        run: |
+          version="${GITHUB_REF#refs/tags/v}"
+          sed -i "s/\${VERSION}/$version/g" docs/vendordep/ruckig-frc.json
       - name: Generate directory indexes
         working-directory: ./docs
         run: |
@@ -177,6 +181,21 @@ jobs:
               echo '  <main>'
               echo '    <pre id="contents">'
               echo '<a href="../">../</a>'
+              # Calculate max filename and file size length for alignment
+              max_fname=0
+              max_fsize=0
+              for f in "$dir"/*; do
+                [ -e "$f" ] || continue
+                fname=$(basename "$f")
+                [ "$fname" = "index.html" ] && continue
+                if [ -d "$f" ]; then
+                  fsize="-"
+                else
+                  fsize=$(stat -c %s "$f" 2>/dev/null || stat -f %z "$f" 2>/dev/null)
+                fi
+                [ ${#fname} -gt $max_fname ] && max_fname=${#fname}
+                [ ${#fsize} -gt $max_fsize ] && max_fsize=${#fsize}
+              done
               for f in "$dir"/*; do
                 [ -e "$f" ] || continue
                 fname=$(basename "$f")
@@ -187,7 +206,11 @@ jobs:
                 else
                   fsize=$(stat -c %s "$f" 2>/dev/null || stat -f %z "$f" 2>/dev/null)
                 fi
-                printf '<a href="%s" title="%s">%s</a> %30s %10s\n' "$fname" "$fname" "$fname" "$mtime" "$fsize"
+                # Print with alignment: filename (left, spacing outside <a>), time, file size (right)
+                fname_space=$(( (max_fname - ${#fname}) + 12 ))
+                fsize_space=$(( max_fsize + 2 ))
+                printf '<a href="%s" title="%s">%s</a>%-*s  %s  %*s\n' \
+                  "$fname" "$fname" "$fname" $fname_space "" "$mtime" $fsize_space "$fsize"
               done
               echo '    </pre>'
               echo '  </main>'
