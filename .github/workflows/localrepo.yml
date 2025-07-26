@@ -33,6 +33,60 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      - name: Generate directory indexes
+        working-directory: ./docs
+        run: |
+          repo_name="${GITHUB_REPOSITORY##*/}"
+          find ./ -type d | while read dir; do 
+            # Remove leading ./
+            relpath="${dir#./}"
+            # If root, use repo name only
+            if [ -z "$relpath" ]; then
+              display_path="$repo_name"
+            else
+              display_path="$repo_name/$relpath"
+            fi
+            (
+              echo '<!DOCTYPE html>'
+              echo '<html>'
+              echo ''
+              echo '<head>'
+              echo '  <title>Record Robotics Repository: '$display_path'</title>'
+              echo '  <meta name="viewport" content="width=device-width, initial-scale=1.0">'
+
+              echo '  <style>'
+              echo 'body { background: #fff; }'
+              echo '  </style>'
+              echo '</head>'
+              echo ''
+              echo '<body>'
+              echo '  <header>'
+              echo '    <h1>'$display_path'</h1>'
+              echo '  </header>'
+              echo '  <hr/>'
+              echo '  <main>'
+              echo '    <pre id="contents">'
+              echo '<a href="../">../</a>'
+              for f in "$dir"/*; do
+                [ -e "$f" ] || continue
+                fname=$(basename "$f")
+                [ "$fname" = "index.html" ] && continue
+                mtime=$(date -u -r "$f" +"%Y-%m-%d %H:%M")
+                if [ -d "$f" ]; then
+                  fsize="-"
+                else
+                  fsize=$(stat -c %s "$f" 2>/dev/null || stat -f %z "$f" 2>/dev/null)
+                fi
+                printf '<a href="%s" title="%s">%s</a> %30s %10s\n' "$fname" "$fname" "$fname" "$mtime" "$fsize"
+              done
+              echo '    </pre>'
+              echo '  </main>'
+              echo '  <hr/>'
+              echo '</body>'
+              echo ''
+              echo '</html>'
+            ) > "$dir/index.html"
+          done
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
