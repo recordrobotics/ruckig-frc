@@ -5,10 +5,10 @@
     "frcYear": "2025",
     "uuid": "163c5268-070c-429a-9e20-0f2287b0d85a",
     "mavenUrls": [
-        "https://recordrobotics.github.io/ruckig-frc/vendordep/repos/releases",
+        "https://maven.recordrobotics.org/ruckig-frc/vendordep/vendordep/repos/releases",
         "https://repo1.maven.org/maven2"
     ],
-    "jsonUrl": "https://recordrobotics.github.io/ruckig-frc/vendordep/ruckig-frc.json",
+    "jsonUrl": "https://maven.recordrobotics.org/ruckig-frc/vendordep/ruckig-frc.json",
     "javaDependencies": [
         {
             "groupId": "org.recordrobotics.ruckig",
