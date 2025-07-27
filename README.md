@@ -16,6 +16,21 @@ More information about the underlying Ruckig library can be found here [https://
 
 ## Build Instructions (Simulation App)
 
+**Prebuilt binaries** for the simulation app are available in the [GitHub Releases](https://github.com/recordrobotics/ruckig-frc/releases/latest) assets. Download the appropriate binary for your platform to get started quickly.
+
+Alternatively, if you want to build manually:
+
+1. Clone the repository:
+
+   ```sh
+   git clone https://github.com/recordrobotics/ruckig-frc.git
+   cd ruckig-frc
+   ```
+
+2. Follow the platform-specific instructions below to configure, build, and run the simulation app.
+
+Refer to the sections for **Windows**, **macOS**, or **Linux** for detailed steps.
+
 > **Prerequisite:** Make sure you have [CMake](https://cmake.org/download/) installed (version 3.28 or newer is required).
 ---
 
