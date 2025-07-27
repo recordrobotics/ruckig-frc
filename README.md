@@ -1,4 +1,4 @@
-# ruckig-frc [![Maven Central](https://img.shields.io/maven-central/v/org.recordrobotics.ruckig/ruckig-frc.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.recordrobotics.ruckig/ruckig-frc)
+# ruckig-frc [![Maven Central](https://img.shields.io/maven-central/v/org.recordrobotics.ruckig/ruckig-frc.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/org.recordrobotics.ruckig/ruckig-frc) [![vendordep](https://img.shields.io/badge/vendordep-ruckig--frc.json-green)](https://maven.recordrobotics.org/ruckig-frc/vendordep/ruckig-frc.json)
 
 [Ruckig](https://github.com/pantor/ruckig) frc swerve simulation and frc-specific java bindings.
 
