@@ -1,0 +1,110 @@
+name: Release Build
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Matrix
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            backend: OpenGL
+          - os: windows-latest
+            backend: DX11
+          - os: macos-15
+            backend: OpenGL
+            arch: arm64
+          - os: macos-15
+            backend: Metal
+            arch: arm64
+          - os: macos-15
+            backend: OpenGL
+            arch: x86_64
+          - os: macos-15
+            backend: Metal
+            arch: x86_64
+          - os: ubuntu-latest
+            backend: OpenGL
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+      - name: Checkout metal-cpp
+        if: ${{ matrix.backend == 'Metal' }}
+        uses: actions/checkout@v4
+        with:
+          repository: bkaradzic/metal-cpp
+          path: metal-cpp
+      - name: Install Linux dependencies
+        if: ${{ startsWith(matrix.os, 'ubuntu-') }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            wayland-protocols \
+            libwayland-dev \
+            libxkbcommon-dev \
+            libxrandr-dev \
+            libx11-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxext-dev \
+            libgl1-mesa-dev
+      - name: Build
+        run: |
+          cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release${{ startsWith(matrix.os, 'macos-') && format(' -DCMAKE_C_COMPILER=$(brew --prefix llvm@18)/bin/clang -DCMAKE_CXX_COMPILER=$(brew --prefix llvm@18)/bin/clang++ -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=$(brew --prefix llvm@18)/bin/clang-scan-deps -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" -DCMAKE_OSX_ARCHITECTURES={0}', matrix.arch) || ''}}${{ startsWith(matrix.os, 'ubuntu-') && ' -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=clang-scan-deps-18' || ''}}${{ startsWith(matrix.os, 'windows-') && ' -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=clang-scan-deps' || ''}} -DBACKEND=${{ matrix.backend }}${{ matrix.backend=='Metal' && ' -DMETAL_CPP_INCLUDE_PATH=metal-cpp' || '' }}
+          cmake --build build --config Release
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruckig-frc-${{ matrix.os }}${{ matrix.arch && format('-{0}', matrix.arch) || '' }}-${{ matrix.backend }}
+          path: build/output
+          if-no-files-found: error
+
+  upload-release-binaries:
+    name: Upload Release Binaries
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: build/
+          pattern: 'ruckig-frc-*'
+      - name: Package build artifacts
+        working-directory: build/
+        run: |
+          for dir in ruckig-frc-*; do
+            if [[ "$dir" == ruckig-frc-windows-* ]]; then
+              (cd "$dir" && zip -r "../$dir.zip" .)
+            else
+              if [ -f "$dir/ruckig_frc" ]; then
+                echo "Making ruckig_frc executable in $dir"
+                chmod +x "$dir/ruckig_frc"
+              else
+                echo "No ruckig_frc found in $dir, skipping chmod"
+              fi
+              tar -czf "$dir.tgz" "$dir"
+            fi
+          done
+      - name: Upload binaries to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          if [ -z "$TAG_NAME" ]; then
+            git fetch --tags --depth=1
+            TAG_NAME=$(git tag --sort=-creatordate | head -n1)
+            echo "No release tag found, using latest tag: $TAG_NAME"
+          fi
+          for archive in build/*.{zip,tgz}; do
+            echo "Uploading $archive to tag $TAG_NAME"
+            gh release upload "$TAG_NAME" "$archive"
+          done
+        shell: bash

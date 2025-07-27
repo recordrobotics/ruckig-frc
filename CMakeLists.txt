@@ -11,6 +11,12 @@ set_property(CACHE BACKEND PROPERTY STRINGS OpenGL DX11 Metal)
 
 message(STATUS "Compiling for graphics backend: ${BACKEND}")
 
+# Define MSVC deprecation warning silence macro and math defines
+add_compile_definitions(
+    _SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS
+    _USE_MATH_DEFINES
+    )
+
 include(FetchContent)
 
 if(BACKEND STREQUAL "OpenGL" OR BACKEND STREQUAL "Metal")
@@ -45,6 +51,7 @@ set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_CLOUD_CLIENT OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(ruckig)
+target_compile_definitions(ruckig PRIVATE _USE_MATH_DEFINES)
 
 add_executable(ruckig_frc main.cpp)
 
@@ -52,9 +59,6 @@ target_sources(ruckig_frc
     PRIVATE
         FILE_SET CXX_MODULES FILES robot.cppm;pid.cppm;ui/uimodule.cppm;ui/ruckig.cppm;window.cppm
 )
-
-# Define MSVC deprecation warning silence macro
-add_compile_definitions(_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS)
 
 # Enable C++23 modules if supported
 if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC|Clang|GNU")
