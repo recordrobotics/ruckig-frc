@@ -1,0 +1,77 @@
+name: Quick Build
+
+on:
+  workflow_dispatch:
+    inputs:
+        backend:
+            description: 'Backend'
+            required: true
+            default: 'OpenGL'
+            type: choice
+            options:
+              - OpenGL
+              - DX11
+              - Metal
+        os:
+            description: 'Operating system'
+            required: true
+            default: 'windows-latest'
+            type: choice
+            options:
+              - windows-latest
+              - macos-15
+              - ubuntu-latest
+        arch:
+            description: 'Architecture'
+            required: true
+            default: 'x86_64'
+            type: choice
+            options:
+              - x86_64
+              - arm64
+
+jobs:
+  build:
+    name: Quick Build - ${{ inputs.os }}${{ inputs.arch && format(' - {0}', inputs.arch) || '' }} - ${{ inputs.backend }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Ensure compatibility
+        if: ${{ (inputs.backend == 'Metal' && inputs.os != 'macos-15') || (inputs.backend == 'DX11' && inputs.os != 'windows-latest') || (inputs.arch == 'arm64' && inputs.os != 'macos-15') }}
+        run: |
+          echo "Error: Unsupported."
+          exit 1
+      - uses: actions/checkout@v4
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v2
+      - name: Checkout metal-cpp
+        if: ${{ inputs.backend == 'Metal' }}
+        uses: actions/checkout@v4
+        with:
+          repository: bkaradzic/metal-cpp
+          path: metal-cpp
+      - name: Install Linux dependencies
+        if: ${{ startsWith(inputs.os, 'ubuntu-') }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            wayland-protocols \
+            libwayland-dev \
+            libxkbcommon-dev \
+            libxrandr-dev \
+            libx11-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxext-dev \
+            libgl1-mesa-dev
+      - name: Build
+        run: |
+          cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release${{ startsWith(inputs.os, 'macos-') && format(' -DCMAKE_C_COMPILER=$(brew --prefix llvm@18)/bin/clang -DCMAKE_CXX_COMPILER=$(brew --prefix llvm@18)/bin/clang++ -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=$(brew --prefix llvm@18)/bin/clang-scan-deps -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" -DCMAKE_OSX_ARCHITECTURES={0}', inputs.arch) || ''}}${{ startsWith(inputs.os, 'ubuntu-') && ' -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=clang-scan-deps-18' || ''}}${{ startsWith(inputs.os, 'windows-') && ' -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=clang-scan-deps' || ''}} -DBACKEND=${{ inputs.backend }}${{ inputs.backend=='Metal' && ' -DMETAL_CPP_INCLUDE_PATH=metal-cpp' || '' }}
+          cmake --build build --config Release
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruckig-frc-${{ inputs.os }}${{ inputs.arch && format('-{0}', inputs.arch) || '' }}-${{ inputs.backend }}
+          path: build/output
+          if-no-files-found: error
+
