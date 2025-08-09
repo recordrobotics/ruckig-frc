@@ -4,12 +4,15 @@ module;
 #include <imgui.h>
 #include <ruckig/ruckig.hpp>
 #include <math.h>
+#include <algorithm>
+#include <cfloat>
 
 export module ui.ruckig;
 
 import ui.uimodule;
 import robot;
 import pid;
+import random;
 
 using namespace ruckig;
 
@@ -20,8 +23,9 @@ export namespace ui
 {
     enum class RobotControlMode
     {
-        PositionHold,
-        Velocity
+        PID,
+        Feedforward,
+        Combined
     };
 
     class RuckigModule : public UIModule
@@ -31,6 +35,7 @@ export namespace ui
         {
             spdlog::info("Ruckig Module initialized with {} DoFs and {} delta time", ruckig.degrees_of_freedom, ruckig.delta_time);
 
+            next_delta_time = ruckig.delta_time;
             init();
             resetRobot();
         }
@@ -49,6 +54,7 @@ export namespace ui
                     ruckig.reset();
                     gui_ruckig.reset();
                     ruckig.delta_time = 0.02; // Reset delta time
+                    next_delta_time = ruckig.delta_time;
                     gui_ruckig.delta_time = ruckig.delta_time;
                     input = InputParameter<3>();
                     output = OutputParameter<3>();
@@ -86,72 +92,15 @@ export namespace ui
                 ImGui::End();
             }
 
+            last_delta_time = next_delta_time;
+
             double current_time = ImGui::GetTime();
-            if (ruckig.delta_time > 0.0 && (current_time - last_time) >= ruckig.delta_time)
+            if (next_delta_time > 0.0 && (current_time - last_time) >= next_delta_time)
             {
                 last_time = current_time;
-
-                for (int i = 0; i < speed_up; i++)
-                {
-                    // Calculate trajectory
-                    auto result = ruckig.update(input, output);
-                    output.pass_to_input(input);
-
-                    switch (control_mode)
-                    {
-                    case RobotControlMode::PositionHold:
-                    {
-                        double ix = 0;
-                        double iy = 0;
-                        double ir = 0;
-
-                        robot.getPosition(ix, iy, ir);
-
-                        double x = output.new_position[0];
-                        double y = output.new_position[1];
-                        double r = output.new_position[2];
-                        double vx = position_pid_x.calculate(x, ix, position_pid_kp, position_pid_ki, position_pid_kd, ruckig.delta_time);
-                        double vy = position_pid_y.calculate(y, iy, position_pid_kp, position_pid_ki, position_pid_kd, ruckig.delta_time);
-                        double vr = position_pid_r.calculate(r, ir, rotation_pid_kp, rotation_pid_ki, rotation_pid_kd, ruckig.delta_time);
-                        double ax = 0;
-                        double ay = 0;
-                        double ar = 0;
-                        robot.update(ruckig.delta_time, x, y, r, vx, vy, vr,
-                                     ax, ay, ar);
-                    }
-                    break;
-                    case RobotControlMode::Velocity:
-                    {
-                        if (result == Result::Working)
-                        {
-                            double x = output.new_position[0];
-                            double y = output.new_position[1];
-                            double r = output.new_position[2];
-                            double vx = output.new_velocity[0];
-                            double vy = output.new_velocity[1];
-                            double vr = output.new_velocity[2];
-                            robot.update(ruckig.delta_time, x, y, r, vx, vy, vr,
-                                         input.current_acceleration[0], input.current_acceleration[1], input.current_acceleration[2]);
-                            input.current_position[0] = x;
-                            input.current_position[1] = y;
-                            input.current_position[2] = r;
-                            input.current_velocity[0] = vx;
-                            input.current_velocity[1] = vy;
-                            input.current_velocity[2] = vr;
-                        }
-                        else if (result == Result::Finished)
-                        {
-                            spdlog::info("Trajectory calculation finished successfully");
-                            break;
-                        }
-                        else
-                        {
-                            spdlog::error("Trajectory calculation failed: {}", std::to_string(result));
-                        }
-                    }
-                    break;
-                    }
-                }
+                updateStep();
+                next_delta_time = ruckig.delta_time +
+                                  (rnd::random_double(0, 1) < loop_overrun_frequency ? rnd::random_double(0, loop_overrun_amount) : 0); // Simulate loop overrun
             }
 
             if (show_trajectory)
@@ -194,7 +143,7 @@ export namespace ui
         InputParameter<3> input;
         OutputParameter<3> output;
         Robot robot;
-        RobotControlMode control_mode = RobotControlMode::PositionHold;
+        RobotControlMode control_mode = RobotControlMode::Combined;
 
         bool show_settings = true;
         bool show_trajectory = true;
@@ -219,11 +168,22 @@ export namespace ui
         std::vector<std::pair<float, float>> trail_points_old_old{max_trail_points};
         std::vector<std::pair<float, float>> trail_points_future;
 
+        std::vector<float> robotErrorP, robotErrorV, robotErrorA;
+        std::vector<float> targetX, targetY, targetR, currentX, currentY, currentR;
+
+        double last_delta_time = 0.02;
+        double next_delta_time = 0.02;
+
+        double loop_overrun_frequency = 0.0;
+        double loop_overrun_amount = 0.01;
+        double position_noise_amount = 0.1;
+        double rotation_noise_amount = 0.1;
+
         void init()
         {
             input.duration_discretization = DurationDiscretization::Discrete;
 
-            input.per_dof_synchronization = {Synchronization::Phase, Synchronization::Phase, Synchronization::TimeIfNecessary};
+            input.per_dof_synchronization = {Synchronization::Phase, Synchronization::Phase, Synchronization::None};
 
             input.max_velocity = {4.0, 4.0, 4.0};
             input.max_acceleration = {10.0, 10.0, 6.46};
@@ -245,6 +205,17 @@ export namespace ui
             trail_points_old_old = std::move(trail_points_old);
             trail_points_old = std::move(trail_points);
             trail_points.clear();
+
+            robotErrorP.clear();
+            robotErrorV.clear();
+            robotErrorA.clear();
+
+            targetX.clear();
+            targetY.clear();
+            targetR.clear();
+            currentX.clear();
+            currentY.clear();
+            currentR.clear();
         }
 
         void drawSettings()
@@ -261,12 +232,67 @@ export namespace ui
                 if (gui_ruckig.delta_time != ruckig.delta_time)
                 {
                     gui_ruckig.delta_time = ruckig.delta_time;
+                    next_delta_time = ruckig.delta_time;
+                }
+
+                ImGui::Spacing();
+
+                double min_loop_overrun_frequency = 0.0, max_loop_overrun_frequency = 1.0;
+                ImGui::TextUnformatted("Loop Overrun Frequency");
+                {
+                    double loop_overrun_frequency_pct = loop_overrun_frequency * 100.0;
+                    double min_pct = min_loop_overrun_frequency * 100.0;
+                    double max_pct = max_loop_overrun_frequency * 100.0;
+                    if (ImGui::SliderScalar("##loop_overrun_frequency", ImGuiDataType_Double,
+                                            &loop_overrun_frequency_pct, &min_pct, &max_pct, "%.1f%%"))
+                    {
+                        loop_overrun_frequency = loop_overrun_frequency_pct / 100.0;
+                    }
+                }
+
+                double min_loop_overrun_amount = 0, max_loop_overrun_amount = 0.5;
+                ImGui::TextUnformatted("Loop Overrun Amount");
+                ImGui::SliderScalar("##loop_overrun_amount", ImGuiDataType_Double, &loop_overrun_amount, &min_loop_overrun_amount, &max_loop_overrun_amount, "%.3f");
+
+                ImGui::TextUnformatted("Noise Amount");
+                {
+                    ImGuiStyle &style = ImGui::GetStyle();
+                    const char *label_xy = "XY";
+                    const char *label_r = "R";
+
+                    float avail = ImGui::GetContentRegionAvail().x;
+                    float label1_w = ImGui::CalcTextSize(label_xy).x;
+                    float label2_w = ImGui::CalcTextSize(label_r).x;
+                    // 4 inline items => 3 spacings
+                    float total_spacing = style.ItemSpacing.x * 3.0f;
+                    float remaining = avail - label1_w - label2_w - total_spacing;
+                    if (remaining < 0.0f)
+                        remaining = 0.0f;
+                    float slider_w = remaining * 0.5f;
+
+                    // Minimum practical width
+                    slider_w = std::max(slider_w, 50.0f);
+
+                    ImGui::TextUnformatted(label_xy);
+                    ImGui::SameLine();
+                    double min_position_noise = 0, max_position_noise = 1.0;
+                    ImGui::SetNextItemWidth(slider_w);
+                    ImGui::SliderScalar("##position_noise_amount", ImGuiDataType_Double,
+                                        &position_noise_amount, &min_position_noise, &max_position_noise, "%.3f");
+
+                    ImGui::SameLine();
+                    ImGui::TextUnformatted(label_r);
+                    ImGui::SameLine();
+                    double min_rotation_noise = 0, max_rotation_noise = 0.5;
+                    ImGui::SetNextItemWidth(slider_w);
+                    ImGui::SliderScalar("##rotation_noise_amount", ImGuiDataType_Double,
+                                        &rotation_noise_amount, &min_rotation_noise, &max_rotation_noise, "%.3f");
                 }
 
                 ImGui::Spacing();
 
                 // Dropdown for control mode
-                static const char *control_options[] = {"PositionHold", "Velocity"};
+                static const char *control_options[] = {"PID", "Feedforward", "Combined"};
                 int current_control_mode = static_cast<int>(control_mode);
 
                 ImGui::TextUnformatted("Control Mode");
@@ -288,10 +314,13 @@ export namespace ui
                             switch (n)
                             {
                             case 0:
-                                ImGui::SetTooltip("Robot follows position using PID (trajectory acts as motion profile) (Default)");
+                                ImGui::SetTooltip("Robot follows position using PID (trajectory acts as motion profile)");
                                 break;
                             case 1:
                                 ImGui::SetTooltip("Robot follows velocity (trajectory acts as feedback control)");
+                                break;
+                            case 2:
+                                ImGui::SetTooltip("Robot follows position using PID and velocity using feedforward (trajectory acts as motion profile and feedback control) (Default)");
                                 break;
                             }
                         }
@@ -301,7 +330,7 @@ export namespace ui
                     control_mode = static_cast<RobotControlMode>(current_control_mode);
                 }
 
-                if (control_mode == RobotControlMode::PositionHold)
+                if (control_mode == RobotControlMode::PID || control_mode == RobotControlMode::Combined)
                 {
                     {
                         ImGui::Spacing();
@@ -445,6 +474,97 @@ export namespace ui
             }
         }
 
+        template <size_t N>
+        static void set_minmax(const std::array<const std::vector<float>, N> v, float &mn, float &mx)
+        {
+            // Compute min/max across all elements of all vectors in v
+            bool found = false;
+            float local_min = FLT_MAX;
+            float local_max = -FLT_MAX;
+
+            for (const auto &vec : v)
+            {
+                if (!vec.empty())
+                {
+                    auto [it_min, it_max] = std::minmax_element(vec.begin(), vec.end());
+                    if (!found)
+                    {
+                        local_min = *it_min;
+                        local_max = *it_max;
+                        found = true;
+                    }
+                    else
+                    {
+                        if (*it_min < local_min)
+                            local_min = *it_min;
+                        if (*it_max > local_max)
+                            local_max = *it_max;
+                    }
+                }
+            }
+
+            if (found)
+            {
+                mn = local_min;
+                mx = local_max;
+                if (mx - mn <= 1e-6f)
+                {
+                    mx = mn + 1.0f;
+                }
+            }
+        };
+
+        template <size_t N, typename... Series>
+        static void drawMultiLine(const char *label,
+                                  const std::array<float, N> &mins,
+                                  const std::array<float, N> &maxs,
+                                  const Series &...series)
+        {
+            static_assert(sizeof...(Series) == N, "Number of min/max entries must match number of series");
+            static_assert(((std::is_same_v<Series, std::tuple<const std::vector<float> &, ImU32>>) && ...),
+                          "Each series must be tuple<const std::vector<float>&, ImU32>");
+
+            const float graph_height = 420.0f;
+            const float graph_width = ImGui::GetContentRegionAvail().x;
+
+            // Determine the number of points to draw (minimum length among all series)
+            std::array<size_t, N> sizes = {std::get<0>(series).size()...};
+            size_t nElements = *std::min_element(sizes.begin(), sizes.end());
+
+            ImGui::Text("%s", label);
+
+            ImVec2 graphPos = ImGui::GetCursorScreenPos();
+            ImDrawList *draw_list = ImGui::GetWindowDrawList();
+            ImVec2 size = ImVec2(graph_width, graph_height);
+            draw_list->AddRect(graphPos, ImVec2(graphPos.x + size.x, graphPos.y + size.y), IM_COL32(200, 200, 200, 255));
+
+            if (nElements >= 2)
+            {
+                auto plot_line = [&](const std::vector<float> &data, float dMin, float dMax, ImU32 color)
+                {
+                    float denom = (dMax - dMin);
+                    if (denom <= 1e-6f)
+                        denom = 1.0f;
+
+                    for (size_t i = 1; i < nElements; ++i)
+                    {
+                        float x0 = graphPos.x + static_cast<float>(i - 1) * size.x / static_cast<float>(nElements - 1);
+                        float x1 = graphPos.x + static_cast<float>(i) * size.x / static_cast<float>(nElements - 1);
+                        float y0 = graphPos.y + size.y - ((data[i - 1] - dMin) / denom) * size.y;
+                        float y1 = graphPos.y + size.y - ((data[i] - dMin) / denom) * size.y;
+                        draw_list->AddLine(ImVec2(x0, y0), ImVec2(x1, y1), color, 2.0f);
+                    }
+                };
+
+                // Expand the series pack, pairing each with its corresponding min/max
+                size_t idx = 0;
+                (void)std::initializer_list<int>{
+                    (plot_line(std::get<0>(series), mins[idx], maxs[idx], std::get<1>(series)), ++idx, 0)...};
+            }
+
+            ImGui::Dummy(size);
+        }
+
         void drawTrajectory()
         {
             InputParameter<3> temp_input{input};
@@ -501,40 +621,40 @@ export namespace ui
             ImGui::Text("Duration: %.3f s", temp_output.time);
             ImGui::Spacing();
 
-            float range = global_max - global_min > 1e-6f ? (global_max - global_min) : 1.0f;
-
-            const float graph_height = 420.0f;
-            const float graph_width = ImGui::GetContentRegionAvail().x;
-            const int N = static_cast<int>(p0.size());
-
-            auto draw_multi_line = [&](const char *label, const std::vector<float> &pos, const std::vector<float> &vel, const std::vector<float> &acc)
+            if (global_max - global_min <= 1e-6f)
             {
-                ImGui::Text("%s", label);
-                ImVec2 p0 = ImGui::GetCursorScreenPos();
-                ImDrawList *draw_list = ImGui::GetWindowDrawList();
-                ImVec2 size = ImVec2(graph_width, graph_height);
-                draw_list->AddRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), IM_COL32(200, 200, 200, 255));
+                global_max = global_min + 1;
+            }
 
-                auto plot_line = [&](const std::vector<float> &data, ImU32 color)
-                {
-                    for (int i = 1; i < N; ++i)
-                    {
-                        float x0 = p0.x + (i - 1) * size.x / (N - 1);
-                        float x1 = p0.x + i * size.x / (N - 1);
-                        float y0 = p0.y + size.y - ((data[i - 1] - global_min) / range) * size.y;
-                        float y1 = p0.y + size.y - ((data[i] - global_min) / range) * size.y;
-                        draw_list->AddLine(ImVec2(x0, y0), ImVec2(x1, y1), color, 2.0f);
-                    }
-                };
-                plot_line(pos, IM_COL32(43, 60, 240, 255)); // Position - blue
-                plot_line(vel, IM_COL32(255, 102, 0, 255)); // Velocity - orange
-                plot_line(acc, IM_COL32(42, 181, 0, 255));  // Acceleration - green
-                ImGui::Dummy(size);
-            };
+            drawMultiLine("Axis 0 (blue=pos, orange=vel, green=acc)", std::array<float, 3>{global_min, global_min, global_min}, {global_max, global_max, global_max}, std::tuple<const std::vector<float> &, ImU32>{p0, IM_COL32(43, 60, 240, 255)}, std::tuple<const std::vector<float> &, ImU32>{v0, IM_COL32(255, 102, 0, 255)}, std::tuple<const std::vector<float> &, ImU32>{a0, IM_COL32(42, 181, 0, 255)});
+            drawMultiLine("Axis 1 (blue=pos, orange=vel, green=acc)", std::array<float, 3>{global_min, global_min, global_min}, {global_max, global_max, global_max}, std::tuple<const std::vector<float> &, ImU32>{p1, IM_COL32(43, 60, 240, 255)}, std::tuple<const std::vector<float> &, ImU32>{v1, IM_COL32(255, 102, 0, 255)}, std::tuple<const std::vector<float> &, ImU32>{a1, IM_COL32(42, 181, 0, 255)});
+            drawMultiLine("Axis 2 (blue=pos, orange=vel, green=acc)", std::array<float, 3>{global_min, global_min, global_min}, {global_max, global_max, global_max}, std::tuple<const std::vector<float> &, ImU32>{p2, IM_COL32(43, 60, 240, 255)}, std::tuple<const std::vector<float> &, ImU32>{v2, IM_COL32(255, 102, 0, 255)}, std::tuple<const std::vector<float> &, ImU32>{a2, IM_COL32(42, 181, 0, 255)});
 
-            draw_multi_line("Axis 0 (blue=pos, orange=vel, green=acc)", p0, v0, a0);
-            draw_multi_line("Axis 1 (blue=pos, orange=vel, green=acc)", p1, v1, a1);
-            draw_multi_line("Axis 2 (blue=pos, orange=vel, green=acc)", p2, v2, a2);
+            std::array<float, 3> err_min = {0.0f, 0.0f, 0.0f};
+            std::array<float, 3> err_max = {1.0f, 1.0f, 1.0f};
+
+            set_minmax<2>({currentX, targetX}, err_min[0], err_max[0]);
+            set_minmax<2>({currentY, targetY}, err_min[1], err_max[1]);
+            set_minmax<2>({currentR, targetR}, err_min[2], err_max[2]);
+
+            drawMultiLine("Current vs Target (blue=x, orange=y, green=rot)",
+                          std::array<float, 6>{err_min[0], err_min[1], err_min[2], err_min[0], err_min[1], err_min[2]},
+                          std::array<float, 6>{err_max[0], err_max[1], err_max[2], err_max[0], err_max[1], err_max[2]},
+                          std::tuple<const std::vector<float> &, ImU32>{currentX, IM_COL32(43, 60, 240, 255)},
+                          std::tuple<const std::vector<float> &, ImU32>{currentY, IM_COL32(255, 102, 0, 255)},
+                          std::tuple<const std::vector<float> &, ImU32>{currentR, IM_COL32(42, 181, 0, 255)},
+                          std::tuple<const std::vector<float> &, ImU32>{targetX, IM_COL32(43 / 2, 60 / 2, 240 / 2, 255)},
+                          std::tuple<const std::vector<float> &, ImU32>{targetY, IM_COL32(255 / 2, 102 / 2, 0 / 2, 255)},
+                          std::tuple<const std::vector<float> &, ImU32>{targetR, IM_COL32(42 / 2, 181 / 2, 0 / 2, 255)});
+
+            err_max = {1.0f, 1.0f, 1.0f};
+
+            set_minmax<1>({robotErrorP}, err_min[0], err_max[0]);
+            set_minmax<1>({robotErrorV}, err_min[1], err_max[1]);
+            set_minmax<1>({robotErrorA}, err_min[2], err_max[2]);
+
+            drawMultiLine("Robot Error (blue=pos, orange=vel, green=acc)", {0, 0, 0}, err_max,
+                          std::tuple<const std::vector<float> &, ImU32>{robotErrorP, IM_COL32(43, 60, 240, 255)}, std::tuple<const std::vector<float> &, ImU32>{robotErrorV, IM_COL32(255, 102, 0, 255)}, std::tuple<const std::vector<float> &, ImU32>{robotErrorA, IM_COL32(42, 181, 0, 255)});
         }
 
         void drawField()
@@ -597,6 +717,16 @@ export namespace ui
                 input.target_position[0] = field_x;
                 input.target_position[1] = field_y;
                 // Optionally, keep input.target_position[2] unchanged
+
+                robotErrorP.clear();
+                robotErrorV.clear();
+                robotErrorA.clear();
+                targetX.clear();
+                targetY.clear();
+                targetR.clear();
+                currentX.clear();
+                currentY.clear();
+                currentR.clear();
             }
 
             // Draw field border
@@ -629,10 +759,8 @@ export namespace ui
             };
 
             // Get robot position and rotation
-            double dx = 0;
-            double dy = 0;
-            double dr = 0;
-            robot.getPosition(dx, dy, dr);
+            double dx, dy, dr;
+            robot.getState(&dx, &dy, &dr);
             drawRobot(draw_list, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dr), false);
             drawRobot(draw_list, static_cast<float>(input.target_position[0]), static_cast<float>(input.target_position[1]), static_cast<float>(input.target_position[2]), true);
             drawRobot(draw_list, static_cast<float>(output.new_position[0]), static_cast<float>(output.new_position[1]), static_cast<float>(output.new_position[2]), true);
@@ -689,19 +817,99 @@ export namespace ui
         {
             ImGui::Text("Field Size: %.1f x %.1f", 10.0f, 10.0f);
             ImGui::Text("Robot Size: %.2f m", 0.1f);
-            double dx = 0;
-            double dy = 0;
-            double dr = 0;
-            robot.getPosition(dx, dy, dr);
+            double dx, dy, dr;
+            robot.getState(&dx, &dy, &dr);
             ImGui::Text("Robot Position: (%.2f, %.2f, %.2f)", dx, dy, dr);
             ImGui::Text("Target Position: (%.2f, %.2f, %.2f)", input.target_position[0], input.target_position[1], input.target_position[2]);
             ImGui::Text("Current Velocity: (%.2f, %.2f, %.2f)", input.current_velocity[0], input.current_velocity[1], input.current_velocity[2]);
             ImGui::Text("Current Acceleration: (%.2f, %.2f, %.2f)", input.current_acceleration[0], input.current_acceleration[1], input.current_acceleration[2]);
             ImGui::Spacing();
 
+            ImGui::Text("Delta Time: %.3f s", last_delta_time);
+            ImGui::Spacing();
+
             ImGui::Text("Speed Up");
             ImGui::SameLine();
             ImGui::SliderInt("##speed_up", &speed_up, 1, 20, "%d", ImGuiSliderFlags_AlwaysClamp);
+        }
+
+        void updateStep()
+        {
+            for (int i = 0; i < speed_up; i++)
+            {
+                // Calculate trajectory
+                auto result = ruckig.update(input, output);
+                output.pass_to_input(input);
+
+                double x = output.new_position[0];
+                double y = output.new_position[1];
+                double r = output.new_position[2];
+                double vx = 0, vy = 0, vr = 0;
+
+                double cx, cy, cr, cvx, cvy, cvr, cax, cay, car;
+                robot.getState(&cx, &cy, &cr, &cvx, &cvy, &cvr, &cax, &cay, &car);
+
+                if (result == Result::Working)
+                {
+                    double ex = x - cx;
+                    double ey = y - cy;
+                    double er = r - cr;
+                    double evx = output.new_velocity[0] - cvx;
+                    double evy = output.new_velocity[1] - cvy;
+                    double evr = output.new_velocity[2] - cvr;
+                    double eax = output.new_acceleration[0] - cax;
+                    double eay = output.new_acceleration[1] - cay;
+                    double ear = output.new_acceleration[2] - car;
+
+                    robotErrorP.push_back(static_cast<float>(std::max(std::abs(ex), std::max(std::abs(ey), std::abs(er)))));
+                    robotErrorV.push_back(static_cast<float>(std::max(std::abs(evx), std::max(std::abs(evy), std::abs(evr)))));
+                    robotErrorA.push_back(static_cast<float>(std::max(std::abs(eax), std::max(std::abs(eay), std::abs(ear)))));
+
+                    targetX.push_back(static_cast<float>(x));
+                    targetY.push_back(static_cast<float>(y));
+                    targetR.push_back(static_cast<float>(r));
+                    currentX.push_back(static_cast<float>(cx));
+                    currentY.push_back(static_cast<float>(cy));
+                    currentR.push_back(static_cast<float>(cr));
+                }
+
+                if (control_mode == RobotControlMode::PID || control_mode == RobotControlMode::Combined)
+                {
+                    // PID uses ruckig delta time because next_delta_time simulates loop overrun which doesn't change the internal PID delta time
+                    vx += position_pid_x.calculate(x, cx, position_pid_kp, position_pid_ki, position_pid_kd, ruckig.delta_time);
+                    vy += position_pid_y.calculate(y, cy, position_pid_kp, position_pid_ki, position_pid_kd, ruckig.delta_time);
+                    vr += position_pid_r.calculate(r, cr, rotation_pid_kp, rotation_pid_ki, rotation_pid_kd, ruckig.delta_time);
+                }
+
+                if (control_mode == RobotControlMode::Feedforward || control_mode == RobotControlMode::Combined)
+                {
+                    vx += output.new_velocity[0];
+                    vy += output.new_velocity[1];
+                    vr += output.new_velocity[2];
+                }
+
+                vx += getPositionNoise(vx);
+                vy += getPositionNoise(vy);
+                vr += getRotationNoise(vr);
+
+                double ax = 0;
+                double ay = 0;
+                double ar = 0;
+
+                // Robot update uses next_delta_time because this is where the actual physics are simulated
+                robot.update(next_delta_time, x, y, r, vx, vy, vr,
+                             ax, ay, ar);
+            }
+        }
+
+        inline double getPositionNoise(double velocity)
+        {
+            return rnd::random_double(-position_noise_amount, position_noise_amount) * std::abs(velocity);
+        }
+
+        inline double getRotationNoise(double velocity)
+        {
+            return rnd::random_double(-position_noise_amount, position_noise_amount) * std::abs(velocity);
         }
     };
 }

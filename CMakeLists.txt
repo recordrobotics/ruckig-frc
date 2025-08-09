@@ -57,7 +57,7 @@ add_executable(ruckig_frc main.cpp)
 
 target_sources(ruckig_frc
     PRIVATE
-        FILE_SET CXX_MODULES FILES robot.cppm;pid.cppm;ui/uimodule.cppm;ui/ruckig.cppm;window.cppm
+    FILE_SET CXX_MODULES FILES robot.cppm;pid.cppm;random.cppm;ui/uimodule.cppm;ui/ruckig.cppm;window.cppm
 )
 
 # Enable C++23 modules if supported

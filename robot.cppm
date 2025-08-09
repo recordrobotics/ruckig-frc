@@ -9,7 +9,8 @@ export class Robot
 public:
     Robot() : pos_x(0.0), pos_y(0.0), rot(0.0),
               last_pos_x(0.0), last_pos_y(0.0), last_rot(0.0),
-              last_vel_x(0.0), last_vel_y(0.0), last_vel_rot(0.0)
+              last_vel_x(0.0), last_vel_y(0.0), last_vel_rot(0.0),
+              last_acc_x(0.0), last_acc_y(0.0), last_acc_rot(0.0)
     {
         spdlog::info("Robot initialized at position ({}, {}) with rotation {}", pos_x, pos_y, rot);
     }
@@ -21,11 +22,23 @@ public:
         rot = r;
     }
 
-    void getPosition(double &x, double &y, double &r) const
+    inline void getState(double *x, double *y, double *r, double *vx = nullptr, double *vy = nullptr, double *vrot = nullptr, double *ax = nullptr, double *ay = nullptr, double *arot = nullptr) const
     {
-        x = pos_x;
-        y = pos_y;
-        r = rot;
+        *x = pos_x;
+        *y = pos_y;
+        *r = rot;
+        if (vx)
+            *vx = last_vel_x;
+        if (vy)
+            *vy = last_vel_y;
+        if (vrot)
+            *vrot = last_vel_rot;
+        if (ax)
+            *ax = last_acc_x;
+        if (ay)
+            *ay = last_acc_y;
+        if (arot)
+            *arot = last_acc_rot;
     }
 
     void update(double delta_time, double &x, double &y, double &r, double &vx, double &vy, double &vrot, double &ax, double &ay, double &arot)
@@ -49,6 +62,9 @@ public:
         last_vel_x = vx;
         last_vel_y = vy;
         last_vel_rot = vrot;
+        last_acc_x = ax;
+        last_acc_y = ay;
+        last_acc_rot = arot;
     }
 
 private:
@@ -62,4 +78,7 @@ private:
     double last_vel_x;
     double last_vel_y;
     double last_vel_rot;
+    double last_acc_x;
+    double last_acc_y;
+    double last_acc_rot;
 };
