@@ -53,7 +53,13 @@ extern "C"
 #pragma region InputParameter3
     JNIEXPORT jlong JNICALL RuckigJNI(createInput3)(JNIEnv *, jobject)
     {
-        return JLONG_FROM_PTR(new ruckig::InputParameter<3>());
+        auto *input = new ruckig::InputParameter<3>();
+        for (size_t dof = 0; dof < input->degrees_of_freedom; ++dof)
+        {
+            input->current_position[dof] = 0.0;
+            input->target_position[dof] = 0.0;
+        }
+        return JLONG_FROM_PTR(input);
     }
 
     JNIEXPORT void JNICALL RuckigJNI(destroyInput3)(JNIEnv *, jobject, jlong handle)
