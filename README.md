@@ -10,7 +10,9 @@ Online installation url: [https://maven.recordrobotics.org/ruckig-frc/vendordep/
 
 ## Example usage
 
-An example of using the library can be found at [jni/org/recordrobotics/ruckig/test/TestRuckig.java](https://github.com/recordrobotics/ruckig-frc/blob/main/jni/org/recordrobotics/ruckig/test/TestRuckig.java)
+A simple example of using the library can be found at [jni/org/recordrobotics/ruckig/test/TestRuckig.java](https://github.com/recordrobotics/ruckig-frc/blob/main/jni/org/recordrobotics/ruckig/test/TestRuckig.java)
+
+A more complete FRC-specific use can be found in our [2025 Robot Code](https://github.com/recordrobotics/2025_Control/blob/main/src/main/java/frc/robot/commands/RuckigAlign.java), and our [Java waypoint implemenation](https://github.com/recordrobotics/2025_Control/blob/main/src/main/java/frc/robot/commands/WaypointAlign.java)
 
 More information about the underlying Ruckig library can be found here [https://docs.ruckig.com/](https://docs.ruckig.com/)
 
