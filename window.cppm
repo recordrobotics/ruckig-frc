@@ -5,9 +5,12 @@ module;
 #include <imgui.h>
 #include <vector>
 
+#include <stb_image.h>
+
 #if BACKEND_OPENGL
 
 #include <GLFW/glfw3.h>
+#include <gl/GL.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
@@ -62,7 +65,7 @@ using Microsoft::WRL::ComPtr;
 export class Window
 {
 public:
-    Window(float size_ratio = 0.7f, int min_width = 640, int min_height = 480, std::string_view title = "Ruckig FRC Simulation")
+    Window(float size_ratio = 0.7f, int min_width = 640, int min_height = 480, std::string_view title = "Ruckig FRC")
     {
 #if BACKEND_OPENGL or BACKEND_METAL
         initGLFW(size_ratio, min_width, min_height, title);
@@ -164,6 +167,121 @@ public:
     void removeUIModule(UIModule *module)
     {
         uimodules_.erase(std::remove(uimodules_.begin(), uimodules_.end(), module), uimodules_.end());
+    }
+
+    void updateTitle(std::string_view title)
+    {
+#if BACKEND_OPENGL or BACKEND_METAL
+        if (window_)
+        {
+            glfwSetWindowTitle(window_, title.data());
+        }
+#elif BACKEND_DX11
+        if (hwnd_)
+        {
+            std::string title_str(title); // Ensure null-terminated string
+            SetWindowText(hwnd_, title_str.c_str());
+        }
+#endif
+    }
+
+    ImTextureID loadTexture(std::string_view path)
+    {
+#if BACKEND_OPENGL
+        // Load image using stb_image or similar
+        int width, height, channels;
+        unsigned char *data = stbi_load(path.data(), &width, &height, &channels, 4);
+        if (!data)
+        {
+            spdlog::error("Failed to load texture: {}", path);
+            return ImTextureID_Invalid;
+        }
+
+        GLuint texture_id;
+        glGenTextures(1, &texture_id);
+        glBindTexture(GL_TEXTURE_2D, texture_id);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        stbi_image_free(data);
+        return (ImTextureID)(uintptr_t)texture_id;
+
+#elif BACKEND_DX11
+        // Load image using stb_image or similar
+        int width, height, channels;
+        unsigned char *data = stbi_load(path.data(), &width, &height, &channels, 4);
+        if (!data)
+        {
+            spdlog::error("Failed to load texture: {}", path);
+            return ImTextureID_Invalid;
+        }
+
+        D3D11_TEXTURE2D_DESC desc = {};
+        desc.Width = width;
+        desc.Height = height;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        D3D11_SUBRESOURCE_DATA subResource = {};
+        subResource.pSysMem = data;
+        subResource.SysMemPitch = width * 4;
+
+        ComPtr<ID3D11Texture2D> texture;
+        HRESULT hr = device_->CreateTexture2D(&desc, &subResource, &texture);
+        stbi_image_free(data);
+
+        if (FAILED(hr))
+        {
+            spdlog::error("Failed to create D3D11 texture: {}", path);
+            return ImTextureID_Invalid;
+        }
+
+        ComPtr<ID3D11ShaderResourceView> srv;
+        hr = device_->CreateShaderResourceView(texture.Get(), nullptr, &srv);
+        if (FAILED(hr))
+        {
+            spdlog::error("Failed to create D3D11 shader resource view: {}", path);
+            return ImTextureID_Invalid;
+        }
+
+        return (ImTextureID)srv.Detach();
+
+#elif BACKEND_METAL
+        // Load image using stb_image or similar
+        int width, height, channels;
+        unsigned char *data = stbi_load(path.data(), &width, &height, &channels, 4);
+        if (!data)
+        {
+            spdlog::error("Failed to load texture: {}", path);
+            return ImTextureID_Invalid;
+        }
+
+        MTL::TextureDescriptor *textureDescriptor = MTL::TextureDescriptor::texture2DDescriptor(
+            MTL::PixelFormat::PixelFormatRGBA8Unorm, width, height, false);
+        textureDescriptor->setUsage(MTL::TextureUsageShaderRead);
+
+        MTL::Texture *texture = device_->newTexture(textureDescriptor);
+        if (!texture)
+        {
+            spdlog::error("Failed to create Metal texture: {}", path);
+            stbi_image_free(data);
+            return ImTextureID_Invalid;
+        }
+
+        MTL::Region region = MTL::Region::Make2D(0, 0, width, height);
+        texture->replaceRegion(region, 0, data, width * 4);
+
+        stbi_image_free(data);
+        return (ImTextureID)texture;
+#endif
     }
 
 private:

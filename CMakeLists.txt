@@ -17,6 +17,12 @@ add_compile_definitions(
     _USE_MATH_DEFINES
     )
 
+if(MSVC)
+    add_compile_options(/wd4648 /wd4996)
+else()
+    add_compile_options(-Wno-unknown-attributes -Wno-deprecated-declarations -Wno-format-nonliteral -Wno-c++11-narrowing)
+endif()
+
 include(FetchContent)
 
 if(BACKEND STREQUAL "OpenGL" OR BACKEND STREQUAL "Metal")
@@ -36,6 +42,23 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(spdlog)
 
 FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG        master
+)
+FetchContent_MakeAvailable(stb)
+
+# Create stb_image implementation file
+file(WRITE ${CMAKE_BINARY_DIR}/stb_image_impl.cpp 
+"#define STB_IMAGE_IMPLEMENTATION
+#include \"stb_image.h\"
+")
+
+# Create stb_image library
+add_library(stb_image ${CMAKE_BINARY_DIR}/stb_image_impl.cpp)
+target_include_directories(stb_image PUBLIC ${stb_SOURCE_DIR})
+
+FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG        v1.92.1
@@ -53,11 +76,73 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(ruckig)
 target_compile_definitions(ruckig PRIVATE _USE_MATH_DEFINES)
 
+# Add fmt before WPILib to satisfy the dependency
+FetchContent_Declare(
+    fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG        11.2.0
+)
+set(FMT_INSTALL ON CACHE BOOL "" FORCE)
+set(FMT_TEST OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(fmt)
+
+FetchContent_Declare(
+    wpilib
+    GIT_REPOSITORY https://github.com/wpilibsuite/allwpilib.git
+    GIT_TAG        v2025.3.2
+)
+set(WITH_CSCORE  OFF CACHE BOOL "" FORCE)
+set(WITH_GUI  OFF CACHE BOOL "" FORCE)
+set(WITH_SIMULATION_MODULES  OFF CACHE BOOL "" FORCE)
+set(WITH_TESTS  OFF CACHE BOOL "" FORCE)
+set(WITH_PROTOBUF  OFF CACHE BOOL "" FORCE)
+set(WITH_WPILIB  OFF CACHE BOOL "" FORCE)
+set(WITH_WPIMATH  OFF CACHE BOOL "" FORCE)
+set(NO_WERROR  ON CACHE BOOL "" FORCE)
+set(WITH_BENCHMARK  OFF CACHE BOOL "" FORCE)
+set(USE_SYSTEM_LIBUV OFF CACHE BOOL "" FORCE)
+set(USE_SYSTEM_FMTLIB ON CACHE BOOL "" FORCE)
+
+set(fmt_DIR "${fmt_BINARY_DIR}")
+
+set(wpilib_SOURCE_DIR "${CMAKE_BINARY_DIR}/_deps/wpilib-src")
+
+# Patch wpilib CMake files for MinGW compatibility
+set(WPIUTIL_CMAKE_FILE "${wpilib_SOURCE_DIR}/wpiutil/CMakeLists.txt")
+set(WPINET_CMAKE_FILE "${wpilib_SOURCE_DIR}/wpinet/CMakeLists.txt")
+
+# Apply patches after fetching but before making available
+FetchContent_GetProperties(wpilib)
+if(NOT wpilib_POPULATED)
+    FetchContent_Populate(wpilib)
+    
+    # Patch wpiutil/CMakeLists.txt
+    file(READ ${WPIUTIL_CMAKE_FILE} WPIUTIL_CONTENT)
+    string(REPLACE "if(MSVC)\n    target_sources(wpiutil PRIVATE \${wpiutil_windows_src})" 
+                   "if(MSVC OR WIN32)\n    target_sources(wpiutil PRIVATE \${wpiutil_windows_src})" 
+                   WPIUTIL_CONTENT "${WPIUTIL_CONTENT}")
+    file(WRITE ${WPIUTIL_CMAKE_FILE} "${WPIUTIL_CONTENT}")
+    
+    # Patch wpinet/CMakeLists.txt
+    file(READ ${WPINET_CMAKE_FILE} WPINET_CONTENT)
+    string(REPLACE "if(NOT MSVC)\n        target_sources(wpinet PRIVATE \${uv_unix_src})" 
+                   "if(NOT MSVC AND NOT WIN32)\n        target_sources(wpinet PRIVATE \${uv_unix_src})" 
+                   WPINET_CONTENT "${WPINET_CONTENT}")
+    string(REPLACE "if(MSVC)\n    target_sources(wpinet PRIVATE \${wpinet_windows_src})" 
+                   "if(MSVC OR WIN32)\n    target_sources(wpinet PRIVATE \${wpinet_windows_src})" 
+                   WPINET_CONTENT "${WPINET_CONTENT}")
+    file(WRITE ${WPINET_CMAKE_FILE} "${WPINET_CONTENT}")
+    
+    add_subdirectory(${wpilib_SOURCE_DIR} ${wpilib_BINARY_DIR})
+endif()
+
+FetchContent_MakeAvailable(wpilib)
+
 add_executable(ruckig_frc main.cpp)
 
 target_sources(ruckig_frc
     PRIVATE
-    FILE_SET CXX_MODULES FILES robot.cppm;pid.cppm;random.cppm;ui/uimodule.cppm;ui/ruckig.cppm;window.cppm
+    FILE_SET CXX_MODULES FILES robot.cppm;pid.cppm;random.cppm;ui/uimodule.cppm;ui/ruckig.cppm;ui/sources/ruckigsource.cppm;ui/sources/ruckig-local.cppm;ui/sources/ruckig-remote.cppm;window.cppm
 )
 
 # Enable C++23 modules if supported
@@ -147,10 +232,12 @@ set(IMGUI_INCLUDE_DIRS
 )
 target_include_directories(ruckig_frc PRIVATE ${IMGUI_INCLUDE_DIRS})
 
+target_include_directories(ruckig_frc PUBLIC ${stb_SOURCE_DIR})
+
 # Link libraries
 # Always link spdlog and ruckig, plus backend-specific
 set(LINK_LIBS spdlog::spdlog ruckig ${BACKEND_LIBS})
-target_link_libraries(ruckig_frc PRIVATE ${LINK_LIBS})
+target_link_libraries(ruckig_frc PRIVATE ${LINK_LIBS} ntcore wpiutil stb_image)
 
 if(NOT DEFINED BUILD_OUTPUT_DIR)
     set(BUILD_OUTPUT_DIR "${CMAKE_SOURCE_DIR}/build/output/")
@@ -173,4 +260,13 @@ add_custom_command(TARGET ruckig_frc POST_BUILD
         "${CMAKE_SOURCE_DIR}/fonts"
         $<TARGET_FILE_DIR:ruckig_frc>/fonts
     COMMENT "Copying all font files to output directory"
+)
+
+
+# Copy assets files to output directory after build
+add_custom_command(TARGET ruckig_frc POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/assets"
+        $<TARGET_FILE_DIR:ruckig_frc>/assets
+    COMMENT "Copying all assets files to output directory"
 )

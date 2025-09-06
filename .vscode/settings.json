@@ -118,7 +118,9 @@
         "xstring": "cpp",
         "xtr1common": "cpp",
         "xtree": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "cfloat": "cpp",
+        "resumable": "cpp"
     },
     "cmake.generator": "Ninja",
     "C_Cpp.experimentalFeatures": "enabled",
@@ -128,5 +130,11 @@
     },
     "cmake.configureArgs": [
         "-DJAVA_HOME=\"C:\\Users\\Public\\wpilib\\2025\\jdk\""
+    ],
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "sonarlint.pathToCompileCommands": "${workspaceFolder}\\build\\compile_commands.json",
+    "cSpell.words": [
+        "Ruckig",
+        "Setpoint"
     ]
 }

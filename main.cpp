@@ -9,7 +9,7 @@ int main()
     try
     {
         Window win;
-        win.addUIModule(new ui::RuckigModule());
+        win.addUIModule(new ui::RuckigModule(win));
         win.mainLoop();
     }
     catch (const std::exception &e)

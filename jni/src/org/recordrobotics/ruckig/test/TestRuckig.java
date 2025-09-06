@@ -52,6 +52,8 @@ public class TestRuckig {
             System.out.println("Result: " + result);
             System.out.println("Input: " + input);
             System.out.println("Output: " + output);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

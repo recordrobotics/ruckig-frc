@@ -1,6 +1,8 @@
 package org.recordrobotics.ruckig.jni;
 
-public class RuckigJNI {
+public final class RuckigJNI {
+    private RuckigJNI(){}
+
     static {
         System.loadLibrary("ruckig_jni");
     }

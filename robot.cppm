@@ -24,9 +24,12 @@ public:
 
     inline void getState(double *x, double *y, double *r, double *vx = nullptr, double *vy = nullptr, double *vrot = nullptr, double *ax = nullptr, double *ay = nullptr, double *arot = nullptr) const
     {
-        *x = pos_x;
-        *y = pos_y;
-        *r = rot;
+        if(x)
+            *x = pos_x;
+        if(y)
+            *y = pos_y;
+        if(r)
+            *r = rot;
         if (vx)
             *vx = last_vel_x;
         if (vy)

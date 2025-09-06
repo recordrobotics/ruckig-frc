@@ -4,6 +4,7 @@ plugins {
     `java-library`
     `maven-publish`
     id("org.jreleaser") version "1.19.0"
+    id("edu.wpi.first.GradleRIO") version "2025.3.2"
 }
 
 java {
@@ -12,6 +13,10 @@ java {
     }
     withJavadocJar()
     withSourcesJar()
+}
+
+dependencies {
+    wpi.java.deps.wpilib().forEach { implementation(it) }
 }
 
 group = "org.recordrobotics.ruckig"
@@ -28,22 +33,22 @@ version = (System.getenv("GITHUB_REF_NAME")?.removePrefix("v")) ?: run {
 
 sourceSets {
     main {
-        java.srcDir("org/recordrobotics/ruckig")
+        java.srcDir("./src")
         resources.srcDir("./build/jni")
-        java.exclude("org/recordrobotics/ruckig/test/**")
+        java.exclude("src/org/recordrobotics/ruckig/test/**")
     }
 }
 
 tasks.named<Jar>("jar") {
-    exclude("org/recordrobotics/ruckig/test/**")
+    exclude("src/org/recordrobotics/ruckig/test/**")
 }
 
 tasks.named<Jar>("sourcesJar") {
-    exclude("org/recordrobotics/ruckig/test/**")
+    exclude("src/org/recordrobotics/ruckig/test/**")
 }
 
 tasks.named<Javadoc>("javadoc") {
-    exclude("org/recordrobotics/ruckig/test/**")
+    exclude("src/org/recordrobotics/ruckig/test/**")
 }
 
 // Create tasks to zip native libraries for each platform

@@ -1,5 +1,6 @@
 package org.recordrobotics.ruckig;
 
+import java.util.Arrays;
 import java.util.OptionalDouble;
 
 import org.recordrobotics.ruckig.jni.RuckigJNI;
@@ -24,6 +25,31 @@ public class Trajectory3 {
      * @param acceleration The acceleration of the robot in each DoF.
      */
     public record KinematicState(double[] position, double[] velocity, double[] acceleration) {
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            KinematicState that = (KinematicState) obj;
+            return Arrays.equals(position, that.position)
+                    && Arrays.equals(velocity, that.velocity)
+                    && Arrays.equals(acceleration, that.acceleration);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Arrays.hashCode(position);
+            result = 31 * result + Arrays.hashCode(velocity);
+            result = 31 * result + Arrays.hashCode(acceleration);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "KinematicState{" + "position="
+                    + Arrays.toString(position) + ", velocity="
+                    + Arrays.toString(velocity) + ", acceleration="
+                    + Arrays.toString(acceleration) + '}';
+        }
     }
 
     /**
