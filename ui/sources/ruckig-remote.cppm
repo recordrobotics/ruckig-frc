@@ -65,6 +65,7 @@ export namespace ui
 
                                             if(telemetryNames.empty()) {
                                                 telemetryName = actualTelemetryName;
+                                                updateValuesWithGet();
                                             }
 
                                             if(std::find(telemetryNames.begin(), telemetryNames.end(), actualTelemetryName) == telemetryNames.end()) {
@@ -76,6 +77,7 @@ export namespace ui
                                             if(telemetryName == actualTelemetryName) {
                                                 if(!telemetryNames.empty()) {
                                                     telemetryName = telemetryNames.front();
+                                                    updateValuesWithGet();
                                                 } else {
                                                     telemetryName = "";
                                                 }
@@ -683,7 +685,7 @@ export namespace ui
             ruckig::DurationDiscretization durationDiscretization = ruckig::DurationDiscretization::Continuous;
             double calculationDuration = 0;
 
-            double robotSize = 0.1;
+            double robotSize = 0.9;
 
             Result lastResult = Result::Working;
             Result previousResult = Result::Finished;
@@ -708,6 +710,82 @@ export namespace ui
                 float h, s, v;
                 ImGui::ColorConvertRGBtoHSV(color.Value.x, color.Value.y, color.Value.z, h, s, v);
                 return h;
+            }
+
+            void updateValuesWithGet()
+            {
+                std::string prefix = "/Ruckig/" + telemetryName + "/";
+
+                auto table = inst.GetTable("Ruckig")->GetSubTable(telemetryName);
+
+                auto actualPosArray = table->GetEntry("ActualPosition").GetDoubleArray({});
+                actualPosition.assign(actualPosArray.begin(), actualPosArray.end());
+
+                auto actualVelArray = table->GetEntry("ActualVelocity").GetDoubleArray({});
+                actualVelocity.assign(actualVelArray.begin(), actualVelArray.end());
+
+                auto setpointPosArray = table->GetEntry("SetpointPosition").GetDoubleArray({});
+                setpointPosition.assign(setpointPosArray.begin(), setpointPosArray.end());
+
+                auto setpointVelArray = table->GetEntry("SetpointVelocity").GetDoubleArray({});
+                setpointVelocity.assign(setpointVelArray.begin(), setpointVelArray.end());
+
+                auto setpointAccArray = table->GetEntry("SetpointAcceleration").GetDoubleArray({});
+                setpointAcceleration.assign(setpointAccArray.begin(), setpointAccArray.end());
+
+                auto targetPosArray = table->GetEntry("TargetPosition").GetDoubleArray({});
+                targetPosition.assign(targetPosArray.begin(), targetPosArray.end());
+
+                auto targetVelArray = table->GetEntry("TargetVelocity").GetDoubleArray({});
+                targetVelocity.assign(targetVelArray.begin(), targetVelArray.end());
+
+                auto targetAccArray = table->GetEntry("TargetAcceleration").GetDoubleArray({});
+                targetAcceleration.assign(targetAccArray.begin(), targetAccArray.end());
+
+                auto newPosArray = table->GetEntry("NewPosition").GetDoubleArray({});
+                newPosition.assign(newPosArray.begin(), newPosArray.end());
+
+                auto newVelArray = table->GetEntry("NewVelocity").GetDoubleArray({});
+                newVelocity.assign(newVelArray.begin(), newVelArray.end());
+
+                auto newAccArray = table->GetEntry("NewAcceleration").GetDoubleArray({});
+                newAcceleration.assign(newAccArray.begin(), newAccArray.end());
+
+                auto newJerkArray = table->GetEntry("NewJerk").GetDoubleArray({});
+                newJerk.assign(newJerkArray.begin(), newJerkArray.end());
+
+                auto maxVelArray = table->GetEntry("MaxVelocity").GetDoubleArray({});
+                maxVelocity.assign(maxVelArray.begin(), maxVelArray.end());
+
+                auto maxAccArray = table->GetEntry("MaxAcceleration").GetDoubleArray({});
+                maxAcceleration.assign(maxAccArray.begin(), maxAccArray.end());
+
+                auto maxJerkArray = table->GetEntry("MaxJerk").GetDoubleArray({});
+                maxJerk.assign(maxJerkArray.begin(), maxJerkArray.end());
+
+                auto syncInts = table->GetEntry("PerDoFSynchronization").GetIntegerArray({});
+                perDoFSynchronization.clear();
+                for (int64_t v : syncInts)
+                {
+                    perDoFSynchronization.push_back(static_cast<Synchronization>(v));
+                }
+
+                durationDiscretization = static_cast<DurationDiscretization>(table->GetEntry("DurationDiscretization").GetInteger(0));
+                synchronization = static_cast<Synchronization>(table->GetEntry("Synchronization").GetInteger(0));
+                lastResult = static_cast<Result>(table->GetEntry("Result").GetInteger(0));
+                waypoint_dof = static_cast<int>(table->GetEntry("Waypoints/DOF").GetInteger(0));
+
+                auto wpPosArray = table->GetEntry("Waypoints/Position").GetDoubleArray({});
+                waypoint_positions.assign(wpPosArray.begin(), wpPosArray.end());
+
+                auto wpVelArray = table->GetEntry("Waypoints/Velocity").GetDoubleArray({});
+                waypoint_velocities.assign(wpVelArray.begin(), wpVelArray.end());
+
+                auto wpAccArray = table->GetEntry("Waypoints/Acceleration").GetDoubleArray({});
+                waypoint_accelerations.assign(wpAccArray.begin(), wpAccArray.end());
+
+                robotSize = table->GetEntry("RobotSize").GetDouble(0.1);
+                calculationDuration = table->GetEntry("CalculationDuration").GetDouble(0.0);
             }
         };
     };

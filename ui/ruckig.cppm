@@ -476,7 +476,7 @@ export namespace ui
             set_minmax<2>({currentY, targetY}, err_min[1], err_max[1]);
             set_minmax<2>({currentR, targetR}, err_min[2], err_max[2]);
 
-            drawMultiLine("Current vs Target (blue=x, orange=y, green=rot)",
+            drawMultiLine("Current vs Target (blue=x, orange=y, green=rot)\nsolid=current, faded=target",
                           std::array<float, 6>{err_min[0], err_min[1], err_min[2], err_min[0], err_min[1], err_min[2]},
                           std::array<float, 6>{err_max[0], err_max[1], err_max[2], err_max[0], err_max[1], err_max[2]},
                           std::tuple<const std::vector<float> &, ImU32>{currentX, IM_COL32(43, 60, 240, 255)},
