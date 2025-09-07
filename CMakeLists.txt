@@ -65,6 +65,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
+if (BACKEND STREQUAL "OpenGL")
+FetchContent_Declare(
+    gl3w
+    GIT_REPOSITORY https://github.com/skaslev/gl3w.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(gl3w)
+endif()
+
 FetchContent_Declare(
     ruckig
     GIT_REPOSITORY https://github.com/pantor/ruckig.git
@@ -161,7 +170,7 @@ if (BACKEND STREQUAL "OpenGL")
         ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
         ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
     )
-    set(BACKEND_LIBS glfw)
+    set(BACKEND_LIBS glfw gl3w)
     if (WIN32)
         list(APPEND BACKEND_LIBS opengl32)
     elseif(APPLE)

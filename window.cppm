@@ -1,5 +1,9 @@
 module;
 
+#if BACKEND_OPENGL
+#include <GL/gl3w.h>
+#endif
+
 #include <spdlog/spdlog.h>
 #include <algorithm>
 #include <imgui.h>
@@ -10,7 +14,6 @@ module;
 #if BACKEND_OPENGL
 
 #include <GLFW/glfw3.h>
-#include <gl/GL.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
@@ -52,6 +55,9 @@ module;
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
 
+#undef max
+#undef min
+
 export module window;
 
 import ui.uimodule;
@@ -67,6 +73,9 @@ export class Window
 public:
     Window(float size_ratio = 0.7f, int min_width = 640, int min_height = 480, std::string_view title = "Ruckig FRC")
     {
+#if BACKEND_OPENGL
+        gl3wInit();
+#endif
 #if BACKEND_OPENGL or BACKEND_METAL
         initGLFW(size_ratio, min_width, min_height, title);
 #elif BACKEND_DX11
@@ -202,8 +211,8 @@ public:
         glBindTexture(GL_TEXTURE_2D, texture_id);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glBindTexture(GL_TEXTURE_2D, 0);
 
