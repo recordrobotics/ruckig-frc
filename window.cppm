@@ -424,8 +424,8 @@ private:
         int screen_width = devMode.dmPelsWidth;
         int screen_height = devMode.dmPelsHeight;
 
-        int win_width = max(static_cast<int>(screen_width * size_ratio), min_width);
-        int win_height = max(static_cast<int>(screen_height * size_ratio), min_height);
+        int win_width = std::max(static_cast<int>(screen_width * size_ratio), min_width);
+        int win_height = std::max(static_cast<int>(screen_height * size_ratio), min_height);
         int xpos = screen_width / 2 - win_width / 2;
         int ypos = screen_height / 2 - win_height / 2;
 
