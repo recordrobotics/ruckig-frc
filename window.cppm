@@ -73,15 +73,14 @@ export class Window
 public:
     Window(float size_ratio = 0.7f, int min_width = 640, int min_height = 480, std::string_view title = "Ruckig FRC")
     {
-#if BACKEND_OPENGL
-        gl3wInit();
-#endif
 #if BACKEND_OPENGL or BACKEND_METAL
         initGLFW(size_ratio, min_width, min_height, title);
 #elif BACKEND_DX11
         initDX11(size_ratio, min_width, min_height, title);
 #endif
-
+#if BACKEND_OPENGL
+        gl3wInit();
+#endif
         initImGui();
     }
 
