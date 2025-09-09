@@ -19,13 +19,11 @@ jobs:
         include:
           - os: windows-latest
             target: windows
-            cross: false
           - os: macos-latest
             target: macos
-            cross: false
+            arch: arm64;x86_64
           - os: ubuntu-latest
             target: linux
-            cross: false
           - os: ubuntu-latest
             target: athena
             cross: true
@@ -57,7 +55,7 @@ jobs:
         working-directory: ./jni
       - name: Build native JNI library
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release${{ matrix.cross && format(' -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/{0}-toolchain.cmake', matrix.target) || '' }}
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release${{ startsWith(matrix.os, 'macos-') && format(' -DCMAKE_OSX_ARCHITECTURES="{0}"', matrix.arch) || ''}}${{ matrix.cross && format(' -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchains/{0}-toolchain.cmake', matrix.target) || '' }}
           cmake --build build --config Release
         working-directory: ./jni
       - name: Upload native library artifact
