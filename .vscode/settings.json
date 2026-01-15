@@ -126,10 +126,10 @@
     "C_Cpp.experimentalFeatures": "enabled",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "cmake.configureEnvironment": {
-        "JAVA_HOME": "C:\\Users\\Public\\wpilib\\2025\\jdk"
+        "JAVA_HOME": "C:\\Users\\Public\\wpilib\\2026\\jdk"
     },
     "cmake.configureArgs": [
-        "-DJAVA_HOME=\"C:\\Users\\Public\\wpilib\\2025\\jdk\""
+        "-DJAVA_HOME=\"C:\\Users\\Public\\wpilib\\2026\\jdk\""
     ],
     "java.configuration.updateBuildConfiguration": "automatic",
     "sonarlint.pathToCompileCommands": "${workspaceFolder}\\build\\compile_commands.json",

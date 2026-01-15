@@ -98,7 +98,7 @@ FetchContent_MakeAvailable(fmt)
 FetchContent_Declare(
     wpilib
     GIT_REPOSITORY https://github.com/wpilibsuite/allwpilib.git
-    GIT_TAG        v2025.3.2
+    GIT_TAG        v2026.1.1
 )
 set(WITH_CSCORE  OFF CACHE BOOL "" FORCE)
 set(WITH_GUI  OFF CACHE BOOL "" FORCE)

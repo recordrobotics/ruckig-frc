@@ -2,7 +2,7 @@
     "fileName": "ruckig-frc.json",
     "name": "ruckig-frc",
     "version": "${VERSION}",
-    "frcYear": "2025",
+    "frcYear": "2026",
     "uuid": "163c5268-070c-429a-9e20-0f2287b0d85a",
     "mavenUrls": [
         "https://maven.recordrobotics.org/ruckig-frc/vendordep/vendordep/repos/releases",

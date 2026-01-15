@@ -4,7 +4,7 @@ plugins {
     `java-library`
     `maven-publish`
     id("org.jreleaser") version "1.19.0"
-    id("edu.wpi.first.GradleRIO") version "2025.3.2"
+    id("edu.wpi.first.GradleRIO") version "2026.1.1"
 }
 
 java {
@@ -114,7 +114,7 @@ publishing {
                 name.set("ruckig-frc")
                 description.set("JNI bindings for Ruckig for FRC")
                 url.set("https://github.com/recordrobotics/ruckig-frc")
-                inceptionYear.set("2025")
+                inceptionYear.set("2026")
                 licenses {
                     license {
                         name.set("MIT License")
@@ -149,7 +149,7 @@ publishing {
                 name.set("ruckig-native")
                 description.set("Native WPILib JNI bindings for Ruckig for FRC")
                 url.set("https://github.com/recordrobotics/ruckig-frc")
-                inceptionYear.set("2025")
+                inceptionYear.set("2026")
                 licenses {
                     license {
                         name.set("MIT License")
