@@ -32,7 +32,7 @@ export namespace ui
     class RuckigModule : public UIModule
     {
     public:
-        RuckigModule(Window &win) : field_texture(win.loadTexture("assets/field25-annotated.png")),
+        RuckigModule(Window &win) : field_texture(win.loadTexture("assets/field26.png")),
                                     win(win),
                                     gui_ruckig(0.02),
                                     source(std::make_unique<sources::RuckigLocal>())
@@ -191,8 +191,8 @@ export namespace ui
         std::vector<float> robotErrorP, robotErrorV, robotErrorA;
         std::vector<float> targetX, targetY, targetR, currentX, currentY, currentR;
 
-        double field_width_meters = 17.5482504; // meters
-        double field_height_meters = 8.0519016; // meters
+        double field_width_meters = 16.517589; // meters
+        double field_height_meters = 8.049031; // meters
 
         void initSource()
         {
